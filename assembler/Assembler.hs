@@ -73,7 +73,7 @@ assembleLine' startpcs ((), stack) pc line (BFCode (x:xs)) = case x of
           hexDigit = (intToDigit . readImmBase 2)
           hex str = toHex <$> getNLowestBits 12 False str
 
-assembleLine' _ _ _ _ (BFCode []) = Right []
+assembleLine' _ _ _ _ (BFCode []) = Right [MachineCode "b000"]
 
 getNLowestBits :: Int -> Bool -> Int -> Either Error String
 getNLowestBits n isSigned val
