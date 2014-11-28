@@ -1,0 +1,14 @@
+hc_output/
+incremental_db/
+db/
+*.qdf
+*.rpt
+*.summary
+*.smsg
+*.pin
+*.done
+*.sof
+*.jdi
+*.txt
+*.cdf
+

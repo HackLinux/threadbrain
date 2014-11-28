@@ -6,30 +6,47 @@ module wb(clk, rf_in, rf_out,
 
 parameter NCORES;
 
+input  clk;
 input  [NCORES*(1+1+1+16+16)-1:0] rf_in;
-output [NCORES*(1+1+1+16+16)-1:0] rf_out;
+input  [15:0] val_in;
+input  wb_en_in;
+input  [15:0] ptr_in;
+
+output reg [NCORES*(1+1+1+16+16)-1:0] rf_out;
 
 reg wb_en = 1'b0;
 reg [15:0] val;
 reg [15:0] ptr;
 reg [NCORES*(1+1+1+16+16)-1:0] rf;
 
+wire valids [NCORES];
+wire retrs [NCORES]; // if a register is being retrived from memory.
+wire lockeds [NCORES];
 wire [15:0] tags [NCORES];
+wire [15:0] vals [NCORES];
 
-wire nvalids [NCORES];
-wire nretrs [NCORES]; // if a register is being retrived from memory.
-wire nlockeds [NCORES];
-wire [15:0] ntags [NCORES];
-wire [15:0] nvals [NCORES];
+reg nvalids [NCORES];
+reg nretrs [NCORES]; // if a register is being retrived from memory.
+reg nlockeds [NCORES];
+reg [15:0] ntags [NCORES];
+reg [15:0] nvals [NCORES];
 
 genvar i;
 generate
     for (i=0; i < NCORES; i=i+1) begin : RF_LOOKUP
-        #(NCORES) rf_read(.num(i), .rf_in(rf), .tag(tags[i]));
+        rf_read #(NCORES) (i, rf_in, valids[i], retrs[i], lockeds[i], tags[i], vals[i]);
     end
 endgenerate
 
-#(NCORES) rf_write(rf, nvalids, nretrs, nlockeds, ntags, nvals, rf_out);
+always @(*) begin
+	integer i;
+	for (i=0; i<NCORES; i=i+1) begin
+		rf_out[i*(1+1+1+16+16) +: 1+1+1+16+16] = {nvalids[i],									  nretrs[i],
+							  nlockeds[i],
+							  ntags[i],
+							  nvals[i]};
+	end
+end
 
 always @(*) begin
     integer i;

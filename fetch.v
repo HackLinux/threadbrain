@@ -7,10 +7,10 @@ input  core_en;
 input  branch_en;
 input  stall;
 input  [15:0] branch_val;
-input  [15:0] mem_fetch_in;
+input  [15:0] fetch_data;
 
 output [15:0] fetch_addr = next_pc;
-output [15:0] ins;
+output reg [15:0] ins;
 
 reg [15:0] next_pc;
 reg [15:0] pc = 16'h0000;

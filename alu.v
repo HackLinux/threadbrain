@@ -13,14 +13,14 @@ input  clk;
 input  [15:0] ins_in;
 input  [15:0] val_in;
 
-output [15:0] val_out;
-output wb_en;
+output reg [15:0] val_out;
+output reg wb_en;
 output [15:0] ptr_select = nptr;
 output [15:0] ptr_wb = ptr;
-output [15:0] branch_val;
-output branch_en;
+output reg [15:0] branch_val;
+output reg branch_en;
 
-reg [15:0] val:
+reg [15:0] val;
 reg [15:0] ins = 16'h0000;
 reg [15:0] ptr = 16'h0000;
 reg [15:0] nptr;
