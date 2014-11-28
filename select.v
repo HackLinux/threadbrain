@@ -26,6 +26,7 @@ output reg stall;
 output reg [15:0] val;
 output [NCORES*(1+1+1+16+16)-1:0] out_regs; 
 
+
 wire valids [NCORES];
 wire retrs [NCORES]; // if a register is being retrived from memory.
 wire lockeds [NCORES];
@@ -38,7 +39,6 @@ wire nlockeds [NCORES];
 wire [15:0] ntags [NCORES];
 wire [15:0] nvals [NCORES];
 
-
 genvar i;
 generate
     for (i=0; i < NCORES; i=i+1) begin : RF_LOOKUP
@@ -46,7 +46,7 @@ generate
     end
 endgenerate
 
-rf_write(rf_in, nvalids, nretrs, nlockeds, ntags, nvals, rf_out);
+#(NCORES) rf_write(rf_in, nvalids, nretrs, nlockeds, ntags, nvals, rf_out);
 
 reg [$clog2(NCORES)-1:0] free_reg;
 // Find first free register.
@@ -64,10 +64,10 @@ end
 wire need_reg = ins[15:12] == PLUS || ins[15:12] == MINUS || ins[15:12] == BRZ;
 wire lock_reg = ins[15:12] == PLUS || ins[15:12] == MINUS;
 reg found_reg;
-reg branch_en1;
+reg branch_en1 = 1'b0;
 reg mem_en;
-reg mem_en1;
-reg mem_en2;
+reg mem_en1 = 1'b0;
+reg mem_en2 = 1'b0;
 reg [$clog2(NCORES)-1:0] mem_dest;
 reg [$clog2(NCORES)-1:0] mem_dest1;
 reg [$clog2(NCORES)-1:0] mem_dest2;

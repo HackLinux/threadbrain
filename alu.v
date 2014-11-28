@@ -21,8 +21,8 @@ output [15:0] branch_val;
 output branch_en;
 
 reg [15:0] val:
-reg [15:0] ins;
-reg [15:0] ptr;
+reg [15:0] ins = 16'h0000;
+reg [15:0] ptr = 16'h0000;
 reg [15:0] nptr;
 
 always @(*) begin
