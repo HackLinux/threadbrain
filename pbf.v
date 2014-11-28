@@ -55,5 +55,62 @@ output		     [6:0]		HEX3;
 //=======================================================
 //  Structural coding
 //=======================================================
+wire clk = ~KEY[0];
+
+parameter NCORES = 1;
+
+// Shared wires
+wire stall;
+
+// Fetch <-> ALU
+wire branch_en;
+wire [15:0] branch_val;
+
+// Fetch <-> ROM
+wire [15:0] fetch_addr;
+wire [15:0] fetch_data;
+
+// Fetch <-> Select
+wire [15:0] select_ins;
+
+// Select <-> ALU
+wire [15:0] ptr_select;
+wire [15:0] alu_ins;
+wire [15:0] alu_val;
+
+// Select <-> RAM
+wire ram_en;
+wire [15:0] ram_ld_data;
+wire [15:0] ram_ld_addr;
+
+// ALU <-> WB
+wire [15:0] wb_val;
+wire wb_en;
+wire [15:0] ptr_wb;
+
+// Registers
+input  [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
+
+// TODO: write back register to memory when done
+// consider letting +++++ work
+
+fetch(.clk(clk), .core_en(1'b1), .branch_en(branch_en), .branch_val(branch_val),
+      .fetch_addr(fetch_addr), .fetch_data(fetch_data), .ins(select_ins));
+
+select #(NCORES) 
+        (.ins(ins), .ptr(ptr_select), .clk(clk), .stall(stall),
+         .out_ins(alu_ins), .branch_en(branch_en), .val(alu_val),
+         .mem_en_in(1'b0), .mem_en_out(ram_en), .mem_data_in(ram_ld_data),
+         .mem_addr_out(ram_ld_addr), .rf_in(rf[0]), .rf_out(rf[1]));
+
+// rf[1] wb rf[0] -> rf[0] select rf[1] -> rf [1] wb
+
+alu(.clk(clk), .ins_in(alu_ins), .val_in(alu_val), .val_out(wb_val),
+    .wb_en(wb_en), .ptr_select(ptr_select), .ptr_wb(ptr_wb),
+    .branch_val(branch_val), .branch_en(branch_en));
+
+wb #(NCORES)
+    (.clk(clk), .rf_in(rf[1]), .rf_out(rf[0]), 
+     .val_in(wb_val), .wb_en_in(wb_en), .ptr_in(ptr_wb));
 
 endmodule

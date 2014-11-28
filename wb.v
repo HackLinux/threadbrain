@@ -1,9 +1,5 @@
 module wb(clk, rf_in, rf_out,
           val_in, wb_en_in, ptr_in);
-// TODO: write back register to memory when done (perhaps in select stage)
-// consider letting +++++ work
-// Check all initial values
-
 parameter NCORES;
 
 input  clk;
