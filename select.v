@@ -1,4 +1,5 @@
-module select(ins, ptr, clk, stall,
+module select(ins, ptr, clk, stall, out_ins,
+              branch_en,
               val, 
               mem_en_in, mem_en_out,
               mem_data_in, mem_addr_out, // different for every select
@@ -16,7 +17,9 @@ input  clk;
 input  [NCORES*(1+1+1+16+16)-1:0] in_regs; 
 input  mem_en_in;
 input  [15:0] mem_data_in;
+input  branch_en,
 
+output [15:0] out_ins = ins;
 output [15:0] mem_addr_out = ptr;
 output reg mem_en_out;
 output reg stall;
@@ -34,6 +37,7 @@ wire nretrs [NCORES]; // if a register is being retrived from memory.
 wire nlockeds [NCORES];
 wire [15:0] ntags [NCORES];
 wire [15:0] nvals [NCORES];
+
 
 genvar i;
 generate
@@ -60,12 +64,15 @@ end
 wire need_reg = ins[15:12] == PLUS || ins[15:12] == MINUS || ins[15:12] == BRZ;
 wire lock_reg = ins[15:12] == PLUS || ins[15:12] == MINUS;
 reg found_reg;
+reg branch_en1;
 reg mem_en;
 reg mem_en1;
 reg mem_en2;
 reg [$clog2(NCORES)-1:0] mem_dest;
 reg [$clog2(NCORES)-1:0] mem_dest1;
 reg [$clog2(NCORES)-1:0] mem_dest2;
+
+wire branching = branch_en | branch_en1;
 
 always @(*) begin
     integer i;
@@ -84,20 +91,22 @@ always @(*) begin
         ntags[i] = tags[i];
         nvals[i] = vals[i];
             
-        // The register is available -- maybe lock it.
-        if (need_reg && 
-            valids[i] && 
-            !lockeds[i] && 
-            tags[i] == ptr) begin
-        
-            val = vals[i];
-            found_reg = 1'b1;
-            nlockeds[i] = lock_reg;
-        // The register is being retrieved -- stall.
-        end else if (need_reg && tags[i] == ptr && retrs[i]) begin
-            stall = 1'b1;
-            found_reg = 1'b1;
-        end
+        if (!branching) begin
+            // The register is available -- maybe lock it.
+            if (need_reg && 
+                valids[i] && 
+                !lockeds[i] && 
+                tags[i] == ptr) begin
+            
+                val = vals[i];
+                found_reg = 1'b1;
+                nlockeds[i] = lock_reg;
+            // The register is being retrieved -- stall.
+            end else if (need_reg && tags[i] == ptr && retrs[i]) begin
+                stall = 1'b1;
+                found_reg = 1'b1;
+            end
+        end 
     end
 
     // Jut retrieved the register from memory.
@@ -111,7 +120,7 @@ always @(*) begin
         stall = 1'b0;
     end
 
-    if (!found_reg && need_reg) begin
+    if (!branching && !found_reg && need_reg) begin
             stall = 1'b1;
             if (!mem_en_in) begin
                 mem_en_out = 1'b1;
@@ -128,6 +137,7 @@ always @(posedge clk) begin
     mem_en2 <= mem_en1;
     mem_dest1 <= mem_dest;
     mem_dest2 <= mem_dest1;
+    branch_en1 <= branch_en;
 end
 
 endmodule
