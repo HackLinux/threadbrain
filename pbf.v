@@ -92,10 +92,8 @@ wire [15:0] ptr_wb;
 wire [15:0] print;
 
 // Registers
-wire  [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
-wire  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
-
-assign rf[0] = rf;
+wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
+reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 
 // TODO: write back register to memory when done
 // consider letting +++++ work
@@ -116,7 +114,7 @@ alu(.clk(clk), .ins_in(alu_ins), .val_in(alu_val), .val_out(wb_val),
     .branch_val(branch_val), .branch_en(branch_en), .print(print));
 
 wb #(NCORES)
-    (.clk(clk), .rf_in(rf[1]), .rf_out(rf[0]), 
+    (.clk(clk), .rf_in(rf_reg), .rf_out(rf[0]), 
      .val_in(wb_val), .wb_en_in(wb_en), .ptr_in(ptr_wb));
 
 rom(.address(fetch_addr), 
@@ -154,10 +152,11 @@ always @(*) begin
                                  rf[1][SW[2:0]*(1+1+1+16+16)+16+16     +: 1]};
         7'b1000xxx: debug_disp = {4'b0000,4'b0000,3'b000,stall,3'b000,branch_en};
         7'b1100xxx: debug_disp = SW[0]? ptr_select : ptr_wb; // ptr, else nptr
-        7'b0111xxx: debug_disp = print,
+        7'b0111xxx: debug_disp = print;
         7'b0001xxx: debug_disp = fetch_data;
         7'b0010xxx: debug_disp = fetch_addr;
         default:   debug_disp = 16'h0000;
+	endcase
 end
 
 seg16(debug_disp, {HEX3,HEX2,HEX1,HEX0});
