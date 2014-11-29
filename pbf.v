@@ -88,6 +88,9 @@ wire [15:0] wb_val;
 wire wb_en;
 wire [15:0] ptr_wb;
 
+// Printing
+wire [15:0] print;
+
 // Registers
 wire  [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
 wire  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
@@ -110,7 +113,7 @@ select #(NCORES)
 
 alu(.clk(clk), .ins_in(alu_ins), .val_in(alu_val), .val_out(wb_val),
     .wb_en(wb_en), .ptr_select(ptr_select), .ptr_wb(ptr_wb),
-    .branch_val(branch_val), .branch_en(branch_en));
+    .branch_val(branch_val), .branch_en(branch_en), .print(print));
 
 wb #(NCORES)
     (.clk(clk), .rf_in(rf[1]), .rf_out(rf[0]), 
@@ -133,5 +136,31 @@ ram(.address(ram_ld_addr),
 always @(posedge clk) begin
     rf_reg <= rf[1];
 end
+
+/////// DEBUGGING ////////
+
+reg [15:0] debug_disp;
+
+always @(*) begin
+    casex (SW[6:0])
+        7'b0000xxx: debug_disp = rf[1][SW[2:0]*(1+1+1+16+16)    +: 16];
+        7'b0100xxx: debug_disp = rf[1][SW[2:0]*(1+1+1+16+16)+16 +: 16];
+        7'b0110xxx: debug_disp = {4'b0000,
+                                 3'b000,
+                                 rf[1][SW[2:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
+                                 3'b000,
+                                 rf[1][SW[2:0]*(1+1+1+16+16)+1+16+16   +: 1],
+                                 3'b000,
+                                 rf[1][SW[2:0]*(1+1+1+16+16)+16+16     +: 1]};
+        7'b1000xxx: debug_disp = {4'b0000,4'b0000,3'b000,stall,3'b000,branch_en};
+        7'b1100xxx: debug_disp = SW[0]? ptr_select : ptr_wb; // ptr, else nptr
+        7'b0111xxx: debug_disp = print,
+        7'b0001xxx: debug_disp = fetch_data;
+        7'b0010xxx: debug_disp = fetch_addr;
+        default:   debug_disp = 16'h0000;
+end
+
+seg16(debug_disp, {HEX3,HEX2,HEX1,HEX0});
+assign LEDR[9:0] = fetch_data;
 
 endmodule

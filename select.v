@@ -7,9 +7,13 @@ module select(ins, ptr, clk, stall, out_ins,
 
 parameter NCORES;
 
+// Should lock.
 parameter PLUS  = 4'h1;
 parameter MINUS = 4'h2;
+
+// Don't lock.
 parameter BRZ   = 4'h5;
+parameter PRINT = 4'h8;
 
 input  [15:0] ins;
 input  [15:0] ptr;
@@ -69,8 +73,12 @@ always @(*) begin
     end
 end
 
-wire need_reg = ins[15:12] == PLUS || ins[15:12] == MINUS || ins[15:12] == BRZ;
+wire need_reg = ins[15:12] == PLUS  || 
+                ins[15:12] == MINUS || 
+                ins[15:12] == BRZ   ||
+                ins[15:12] == PRINT;
 wire lock_reg = ins[15:12] == PLUS || ins[15:12] == MINUS;
+
 reg found_reg;
 reg branch_en1 = 1'b0;
 reg mem_en;
