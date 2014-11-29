@@ -57,7 +57,7 @@ output		     [6:0]		HEX3;
 //=======================================================
 wire clk = ~KEY[0];
 
-parameter NCORES = 1;
+parameter NCORES = 2;
 
 // Shared wires
 wire stall;
@@ -89,7 +89,7 @@ wire wb_en;
 wire [15:0] ptr_wb;
 
 // Registers
-input  [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
+wire  [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
 
 // TODO: write back register to memory when done
 // consider letting +++++ work
@@ -98,7 +98,7 @@ fetch(.clk(clk), .core_en(1'b1), .branch_en(branch_en), .branch_val(branch_val),
       .fetch_addr(fetch_addr), .fetch_data(fetch_data), .ins(select_ins));
 
 select #(NCORES) 
-        (.ins(ins), .ptr(ptr_select), .clk(clk), .stall(stall),
+        (.ins(select_ins), .ptr(ptr_select), .clk(clk), .stall(stall),
          .out_ins(alu_ins), .branch_en(branch_en), .val(alu_val),
          .mem_en_in(1'b0), .mem_en_out(ram_en), .mem_data_in(ram_ld_data),
          .mem_addr_out(ram_ld_addr), .rf_in(rf[0]), .rf_out(rf[1]));
@@ -112,5 +112,18 @@ alu(.clk(clk), .ins_in(alu_ins), .val_in(alu_val), .val_out(wb_val),
 wb #(NCORES)
     (.clk(clk), .rf_in(rf[1]), .rf_out(rf[0]), 
      .val_in(wb_val), .wb_en_in(wb_en), .ptr_in(ptr_wb));
+
+rom(.address(fetch_addr), 
+    .inclock(clk),
+    .inclocken(1'b1), 
+    .outclock(clk),
+    .outclocken(!stall),
+    .q(fetch_data));
+
+ram(.address(ram_ld_addr),
+    .clock(clk),
+	 .data(16'h0000),
+	 .wren(1'b0),
+	 .q(ram_ld_data));
 
 endmodule

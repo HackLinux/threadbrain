@@ -123,8 +123,8 @@ always @(*) begin
         found_reg = 1'b1;
         nvalids[mem_dest2] = 1'b1;
         nretrs[mem_dest2] = 1'b0;
-        nlockeds[i] = lock_reg;
-        nvals[i] = mem_data_in;  
+        nlockeds[mem_dest2] = lock_reg;
+        nvals[mem_dest2] = mem_data_in;  
         stall = 1'b0;
     end
 

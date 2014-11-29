@@ -30,7 +30,7 @@ reg [15:0] nvals [NCORES];
 genvar i;
 generate
     for (i=0; i < NCORES; i=i+1) begin : RF_LOOKUP
-        rf_read #(NCORES) (i, rf_in, valids[i], retrs[i], lockeds[i], tags[i], vals[i]);
+        rf_read #(NCORES) (i, rf, valids[i], retrs[i], lockeds[i], tags[i], vals[i]);
     end
 endgenerate
 
