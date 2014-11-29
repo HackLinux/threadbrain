@@ -90,6 +90,9 @@ wire [15:0] ptr_wb;
 
 // Registers
 wire  [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
+wire  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
+
+assign rf[0] = rf;
 
 // TODO: write back register to memory when done
 // consider letting +++++ work
@@ -125,5 +128,10 @@ ram(.address(ram_ld_addr),
 	 .data(16'h0000),
 	 .wren(1'b0),
 	 .q(ram_ld_data));
+
+// register file -- goes through wb, then select
+always @(posedge clk) begin
+    rf_reg <= rf[1];
+end
 
 endmodule

@@ -30,17 +30,18 @@ reg [15:0] nvals [NCORES];
 genvar i;
 generate
     for (i=0; i < NCORES; i=i+1) begin : RF_LOOKUP
-        rf_read #(NCORES) (i, rf, valids[i], retrs[i], lockeds[i], tags[i], vals[i]);
+        rf_read #(NCORES) (i, rf_in, valids[i], retrs[i], lockeds[i], tags[i], vals[i]);
     end
 endgenerate
 
 always @(*) begin
 	integer i;
 	for (i=0; i<NCORES; i=i+1) begin
-		rf_out[i*(1+1+1+16+16) +: 1+1+1+16+16] = {nvalids[i],									  nretrs[i],
-							  nlockeds[i],
-							  ntags[i],
-							  nvals[i]};
+		rf_out[i*(1+1+1+16+16) +: 1+1+1+16+16] = {nvalids[i],
+                                                  nretrs[i],
+                                                  nlockeds[i],
+                                                  ntags[i],
+                                                  nvals[i]};
 	end
 end
 
@@ -65,7 +66,6 @@ always @(posedge clk) begin
     wb_en <= wb_en_in;
     val <= val_in;
     ptr <= ptr_in;
-    rf <= rf_in;
 end
 
 endmodule

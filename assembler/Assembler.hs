@@ -56,15 +56,15 @@ assembleLine' startpcs ((), stack) pc line (BFCode (x:xs)) = case x of
             Right start -> (MachineCode ("6" ++ start):) <$> restnext
             Left err -> Left err
     '^' -> case hex (startpcs !! (line - 1)) of
-            Right start -> (MachineCode ("7" ++ start):) <$> restnext
+            Right start -> (MachineCode ("6" ++ start):) <$> restnext
             Left err -> Left err
     'v' -> if length startpcs == (line + 2) then Left (Error "v at last line")
                 else case hex (startpcs !! (line + 1)) of
-                    Right start -> (MachineCode ("8" ++ start):) <$> restnext
+                    Right start -> (MachineCode ("6" ++ start):) <$> restnext
                     Left err -> Left err 
-    '|' -> (MachineCode "9000":) <$> rest
+    '|' -> (MachineCode "7000":) <$> rest
     ' ' -> assembleLine' startpcs ((), stack) (pc) line $ BFCode xs
-    '.' -> (MachineCode "a000":) <$> rest
+    '.' -> (MachineCode "8000":) <$> rest
     where rest = assembleLine' startpcs ((), stack) (pc+1) line $ BFCode xs
           (startJump, nextstack) = getJumpStart stack 
           restnext = assembleLine' startpcs ((), nextstack) (pc+1) line $ BFCode xs
@@ -73,7 +73,7 @@ assembleLine' startpcs ((), stack) pc line (BFCode (x:xs)) = case x of
           hexDigit = (intToDigit . readImmBase 2)
           hex str = toHex <$> getNLowestBits 12 False str
 
-assembleLine' _ _ _ _ (BFCode []) = Right [MachineCode "b000"]
+assembleLine' _ _ _ _ (BFCode []) = Right [MachineCode "9000"]
 
 getNLowestBits :: Int -> Bool -> Int -> Either Error String
 getNLowestBits n isSigned val
