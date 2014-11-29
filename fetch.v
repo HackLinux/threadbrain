@@ -13,7 +13,7 @@ output [15:0] fetch_addr = next_pc;
 output reg [15:0] ins;
 
 reg [15:0] next_pc;
-reg [15:0] pc = 16'h0000;
+reg [15:0] pc = 16'hffff;
 
 reg core_en1 = 1'b0;
 reg core_en2 = 1'b0;

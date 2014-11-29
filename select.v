@@ -23,7 +23,7 @@ input  mem_en_in;
 input  [15:0] mem_data_in;
 input  branch_en;
 
-output [15:0] out_ins = ins;
+output [15:0] out_ins = stall || branching ? 16'h0000 : ins;
 output [15:0] mem_addr_out = ptr;
 output reg mem_en_out;
 output reg stall;
@@ -112,13 +112,14 @@ always @(*) begin
             if (need_reg && 
                 valids[i] && 
                 !lockeds[i] && 
+                !retrs[i] &&
                 tags[i] == ptr) begin
             
                 val = vals[i];
                 found_reg = 1'b1;
                 nlockeds[i] = lock_reg;
             // The register is being retrieved -- stall.
-            end else if (need_reg && tags[i] == ptr && retrs[i]) begin
+            end else if (need_reg && tags[i] == ptr && valids[i]) begin
                 stall = 1'b1;
                 found_reg = 1'b1;
             end
