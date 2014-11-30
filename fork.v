@@ -4,7 +4,7 @@ module fork(ins_in,
 
 parameter NCORES;
 
-parameter FORK = 4'h6;
+parameter FORK = 4'h7;
 
 input  [15:0] ins_in;
 input  [NCORES-1:0] core_ens_in;

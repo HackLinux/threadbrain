@@ -9,8 +9,9 @@ parameter MINUS = 4'h2;
 parameter INC   = 4'h3;
 parameter DEC   = 4'h4;
 parameter BRZ   = 4'h5;
+parameter BR    = 4'h6; // unconditional branch
 
-parameter PRINT = 4'h8;
+parameter PRINT = 4'h9;
 
 input  clk;
 input  [15:0] ins_in;
@@ -57,6 +58,10 @@ always @(*) begin
                     branch_val = {4'b0000, ins[11:0]};
                     branch_en = 1'b1;
             end
+        end
+        BR: begin
+            branch_val = {4'b0000, ins[11:0]};
+            branch_en = 1'b1;
         end
         PRINT: begin
             print = val;

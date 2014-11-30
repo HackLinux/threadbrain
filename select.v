@@ -15,7 +15,7 @@ parameter MINUS = 4'h2;
 
 // Don't lock.
 parameter BRZ   = 4'h5;
-parameter PRINT = 4'h8;
+parameter PRINT = 4'h9;
 
 input  [15:0] ins;
 input  [15:0] ptr;
