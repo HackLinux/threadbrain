@@ -26,7 +26,7 @@ output reg [15:0] print;
 
 reg [15:0] val;
 reg [15:0] ins = 16'h0000;
-reg [15:0] ptr = 16'h0000;
+reg [15:0] ptr = 16'd128;
 reg [15:0] nptr;
 
 always @(*) begin

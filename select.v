@@ -53,22 +53,26 @@ endgenerate
 always @(*) begin
 	integer i;
 	for (i=0; i<NCORES; i=i+1) begin
-		rf_out[i*(1+1+1+16+16) +: 1+1+1+16+16] = {nvalids[i],									  nretrs[i],
-							  nlockeds[i],
-							  ntags[i],
-							  nvals[i]};
+		rf_out[i*(1+1+1+16+16) +: 1+1+1+16+16] = {nvalids[i],
+                                                  nretrs[i],
+                                                  nlockeds[i],
+                                                  ntags[i],
+                                                  nvals[i]};
 	end
 end
 
 reg [$clog2(NCORES)-1:0] free_reg;
+reg found_free_reg;
 // Find first free register.
 always @(*) begin
     integer i;
     free_reg = 0;
+    found_free_reg = 1'b0;
 
     for (i=0; i<NCORES; i=i+1) begin
-        if (!valids[i] && !retrs[i]) begin
+        if (!found_free_reg && !valids[i] && !retrs[i]) begin
             free_reg = i;        
+            found_free_reg = 1'b1;
         end
     end
 end
@@ -118,8 +122,10 @@ always @(*) begin
                 val = vals[i];
                 found_reg = 1'b1;
                 nlockeds[i] = lock_reg;
-            // The register is being retrieved -- stall.
-            end else if (need_reg && tags[i] == ptr && valids[i]) begin
+            // The register is being retrieved or is locked -- stall.
+            end else if (need_reg && 
+                         tags[i] == ptr && 
+                         ((valids[i] && lockeds[i]) || retrs[i])) begin
                 stall = 1'b1;
                 found_reg = 1'b1;
             end

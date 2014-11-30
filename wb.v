@@ -55,7 +55,7 @@ always @(*) begin
         ntags[i] = tags[i];
         nvals[i] = vals[i];
 
-        if (wb_en && tags[i] == ptr) begin
+        if (wb_en && tags[i] == ptr && valids[i]) begin
             nlockeds[i] = 1'b0;
             nvals[i] = val;
         end

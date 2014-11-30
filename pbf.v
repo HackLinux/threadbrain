@@ -145,43 +145,45 @@ reg [15:0] debug_disp;
 
 always @(*) begin
     casex (SW[6:0])
-        7'b00000xx: debug_disp = rf[1][SW[2:0]*(1+1+1+16+16)    +: 16];
-        7'b01000xx: debug_disp = rf[1][SW[2:0]*(1+1+1+16+16)+16 +: 16];
+        7'b00000xx: debug_disp = rf[1][SW[1:0]*(1+1+1+16+16)    +: 16];
+        7'b01000xx: debug_disp = rf[1][SW[1:0]*(1+1+1+16+16)+16 +: 16];
         7'b01100xx: debug_disp = {4'b0000,
                                  3'b000,
-                                 rf[1][SW[2:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
+                                 rf[1][SW[1:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
                                  3'b000,
-                                 rf[1][SW[2:0]*(1+1+1+16+16)+1+16+16   +: 1],
+                                 rf[1][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
                                  3'b000,
-                                 rf[1][SW[2:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b00001xx: debug_disp = rf[rf_reg][SW[2:0]*(1+1+1+16+16)    +: 16];
-        7'b01001xx: debug_disp = rf[rf_reg][SW[2:0]*(1+1+1+16+16)+16 +: 16];
+                                 rf[1][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
+        7'b00001xx: debug_disp = rf[rf_reg][SW[1:0]*(1+1+1+16+16)    +: 16];
+        7'b01001xx: debug_disp = rf[rf_reg][SW[1:0]*(1+1+1+16+16)+16 +: 16];
         7'b01101xx: debug_disp = {4'b0000,
                                  3'b000,
-                                 rf[rf_reg][SW[2:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
+                                 rf[rf_reg][SW[1:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
                                  3'b000,
-                                 rf[rf_reg][SW[2:0]*(1+1+1+16+16)+1+16+16   +: 1],
+                                 rf[rf_reg][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
                                  3'b000,
-                                 rf[rf_reg][SW[2:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b00011xx: debug_disp = rf[0][SW[2:0]*(1+1+1+16+16)    +: 16];
-        7'b01011xx: debug_disp = rf[0][SW[2:0]*(1+1+1+16+16)+16 +: 16];
+                                 rf[rf_reg][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
+        7'b00011xx: debug_disp = rf[0][SW[1:0]*(1+1+1+16+16)    +: 16];
+        7'b01011xx: debug_disp = rf[0][SW[1:0]*(1+1+1+16+16)+16 +: 16];
         7'b01111xx: debug_disp = {4'b0000,
                                  3'b000,
-                                 rf[0][SW[2:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
+                                 rf[0][SW[1:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
                                  3'b000,
-                                 rf[0][SW[2:0]*(1+1+1+16+16)+1+16+16   +: 1],
+                                 rf[0][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
                                  3'b000,
-                                 rf[0][SW[2:0]*(1+1+1+16+16)+16+16     +: 1]};
+                                 rf[0][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
         7'b10000xx: debug_disp = {4'b0000,4'b0000,3'b000,stall,3'b000,branch_en};
         7'b11000xx: debug_disp = SW[0]? ptr_select : ptr_wb; // ptr, else nptr
         7'b01110xx: debug_disp = print;
-        7'b00010xx: debug_disp = SW[0] ? fetch_data : ram_ld_data;
-        7'b00100xx: debug_disp = fetch_addr;
+        7'b00010xx: debug_disp = SW[0] ? ram_ld_data : fetch_data;
+        7'b00100xx: debug_disp = SW[0] ? ram_ld_addr : fetch_addr;
+        7'b10001xx: debug_disp = SW[0] ? alu_val     : wb_val;
+        7'b10011xx: debug_disp = SW[0] ? alu_ins     : select_ins;
         default:   debug_disp = 16'h0000;
 	endcase
 end
 
 seg16({1'b1, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
-assign LEDR[9:0] = fetch_data[9:0];
+assign LEDR[9:0] = fetch_data[15:6];
 
 endmodule
