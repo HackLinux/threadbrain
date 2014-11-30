@@ -132,7 +132,7 @@ rom(.address(fetch_addr),
     .outclocken(!stall),
     .q(fetch_data));
 
-ram(.address(ram_ld_addr),
+ram(.address(st_en ? ram_st_addr : ram_ld_addr),
     .clock(clk),
 	.data(ram_st_data),
 	.wren(st_en),
