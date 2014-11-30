@@ -34,13 +34,26 @@ formatMifWidth width codes =
             | width == 32 = "\t" ++ (show $ length codes)  ++ ": " ++ "ffffffff;"
 
 assemble :: BFCode -> Either Error [MachineCode]
-assemble asm = filter ((/= "").mc) <$> concat <$> zipWithM (assembleLine linepcs ((), [])) [0..] bfs
+assemble asm = filter ((/= "").mc) <$> concat <$> zipWithM (assembleLine linepcs) [0..] bfs
     where bfs = filter ((/="").bf) $ map BFCode $ lines $ bf asm
           linepcs = getLinePCs bfs
 
-assembleLine :: [Int] -> ((), Stack) -> Int -> BFCode -> Either Error [MachineCode]
-assembleLine startpcs stack line code = 
-    assembleLine' startpcs stack (startpcs !! line) line code
+assembleLine :: [Int] -> Int -> BFCode -> Either Error [MachineCode]
+assembleLine startpcs line code = 
+    (reverse <$> ((MachineCode "a000":) <$> assembleLine' startpcs ((),[]) ((startpcs !! line) + (length (bf code)) -1) line ((BFCode . reverse . bf) code)))
+    >>= (getEnds ((),[]) (startpcs !! line))
+
+
+getEnds :: ((), Stack) -> Int -> [MachineCode] -> Either Error [MachineCode]
+getEnds ((), stack) pc (x:xs)
+    | (head.mc) x == '5' = (x:) <$> getEnds (pushJump pc stack) (pc+1) xs
+    | (head.mc) x == '6' = case hex startJump of
+                            Right start -> (MachineCode ("6" ++ start):) <$> getEnds ((),nextstack) (pc+1) xs
+                            Left err -> Left err
+    | otherwise          = (x:) <$> getEnds ((),stack) (pc+1) xs
+    where (startJump, nextstack) = getJump stack 
+getEnds _ _ [] = Right []
+
 
 assembleLine' :: [Int] -> ((), Stack) -> Int -> Int -> BFCode -> Either Error [MachineCode]
 assembleLine' startpcs ((), stack) pc line (BFCode (x:xs)) = case x of
@@ -48,32 +61,33 @@ assembleLine' startpcs ((), stack) pc line (BFCode (x:xs)) = case x of
     '-' -> (MachineCode "2000":) <$> rest
     '>' -> (MachineCode "3000":) <$> rest
     '<' -> (MachineCode "4000":) <$> rest
-    '[' -> assembleLine' startpcs (pushStartJump pc stack) pc line $ BFCode xs
-    ']' -> case hex startJump of 
-            Right start -> (MachineCode ("5" ++ start):) <$> restnext
+    '[' -> case hex endJump of 
+            Right end -> (MachineCode ("5" ++ end):) <$> restnext
             Left err -> Left err
+    ']' -> (MachineCode "6000":) <$> (assembleLine' startpcs (pushJump pc stack) (pc-1) line $ BFCode xs)
     '*' -> case hex line of
-            Right start -> (MachineCode ("6" ++ start):) <$> restnext
+            Right start -> (MachineCode ("7" ++ start):) <$> rest
             Left err -> Left err
     '^' -> case hex (startpcs !! (line - 1)) of
-            Right start -> (MachineCode ("6" ++ start):) <$> restnext
+            Right start -> (MachineCode ("7" ++ start):) <$> rest
             Left err -> Left err
     'v' -> if length startpcs == (line + 2) then Left (Error "v at last line")
                 else case hex (startpcs !! (line + 1)) of
-                    Right start -> (MachineCode ("6" ++ start):) <$> restnext
+                    Right start -> (MachineCode ("7" ++ start):) <$> rest
                     Left err -> Left err 
-    '|' -> (MachineCode "7000":) <$> rest
-    ' ' -> assembleLine' startpcs ((), stack) (pc) line $ BFCode xs
-    '.' -> (MachineCode "8000":) <$> rest
-    where rest = assembleLine' startpcs ((), stack) (pc+1) line $ BFCode xs
-          (startJump, nextstack) = getJumpStart stack 
-          restnext = assembleLine' startpcs ((), nextstack) (pc+1) line $ BFCode xs
-          toHex [] = []
-          toHex bits = (hexDigit $ take 4 bits) : (toHex $ drop 4 bits)
-          hexDigit = (intToDigit . readImmBase 2)
-          hex str = toHex <$> getNLowestBits 12 False str
+    '|' -> (MachineCode "8000":) <$> rest
+    ' ' -> assembleLine' startpcs ((), stack) pc line $ BFCode xs
+    '.' -> (MachineCode "9000":) <$> rest
+    where rest = assembleLine' startpcs ((), stack) (pc-1) line $ BFCode xs
+          (endJump, nextstack) = getJump stack 
+          restnext = assembleLine' startpcs ((), nextstack) (pc-1) line $ BFCode xs
+assembleLine' _ _ _ _ (BFCode []) = Right []
 
-assembleLine' _ _ _ _ (BFCode []) = Right [MachineCode "9000"]
+toHex [] = []
+toHex bits = (hexDigit $ take 4 bits) : (toHex $ drop 4 bits)
+hexDigit = (intToDigit . readImmBase 2)
+hex str = toHex <$> getNLowestBits 12 False str
+
 
 getNLowestBits :: Int -> Bool -> Int -> Either Error String
 getNLowestBits n isSigned val
@@ -88,11 +102,11 @@ getNLowestBits n isSigned val
 getLinePCs :: [BFCode] -> [Int]
 getLinePCs bfs = scanl (\acc x -> acc + (length. bf) x) 0 bfs
 
-pushStartJump :: Int -> Stack -> ((),Stack)
-pushStartJump a xs = ((), a:xs)
+pushJump :: Int -> Stack -> ((),Stack)
+pushJump a xs = ((), a:xs)
 
-getJumpStart :: Stack -> (Int,Stack)
-getJumpStart (x:xs) = (x,xs)
+getJump :: Stack -> (Int,Stack)
+getJump (x:xs) = (x,xs)
 
 readImmBase :: Num a => a -> String -> a
 readImmBase base imm = foldl (\l r -> base*l + r) 0 nums
