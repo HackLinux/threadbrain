@@ -5,6 +5,7 @@ module select(ins, ptr, clk, stall, out_ins,
               ld_data_in, ld_addr_out, // different for every select
               st_en_in, st_en_out,
               st_data_out, st_addr_out,
+              core_en_in, core_en_out,
               rf_in, rf_out);
 
 parameter NCORES;
@@ -17,6 +18,9 @@ parameter MINUS = 4'h2;
 parameter BRZ   = 4'h5;
 parameter PRINT = 4'h9;
 
+// Disable coreeeee
+parameter END = 4'hA;
+
 input  [15:0] ins;
 input  [15:0] ptr;
 input  clk;
@@ -25,6 +29,7 @@ input  ld_en_in;
 input  [15:0] ld_data_in;
 input  st_en_in;
 input  branch_en;
+input  core_en_in;
 
 output [15:0] out_ins = stall || branching ? 16'h0000 : ins;
 output [15:0] ld_addr_out = ptr;
@@ -35,6 +40,7 @@ output reg [15:0] st_data_out;
 output reg stall;
 output reg [15:0] val;
 output reg [NCORES*(1+1+1+16+16)-1:0] rf_out; 
+output core_en_out = !should_st && ins[15:12] == END ? 1'b0 : core_en_in;
 
 
 wire valids [NCORES];
@@ -103,7 +109,10 @@ wire branching = branch_en | branch_en1;
 // Keep track so that we can store it when finished.
 reg  [1+16-1:0] last_ptr_used = 0;
 reg  [1+16-1:0] nlast_ptr_used;
-wire should_st = need_reg && last_ptr_used[16] && last_ptr_used[15:0] != ptr[15:0];
+wire should_st = (need_reg && 
+                  last_ptr_used[16] && 
+                  last_ptr_used[15:0] != ptr[15:0]) ||
+                  (last_ptr_used[16] && ins[15:12] == END);
 
 always @(*) begin
     integer i;
@@ -117,7 +126,13 @@ always @(*) begin
     st_en_out = st_en_in;
     st_data_out = 16'hdead;
 
-    nlast_ptr_used = need_reg ? {1'b1, ptr} : last_ptr_used;
+    if (need_reg) begin
+        nlast_ptr_used = {1'b1, ptr}
+    else if (ins[15:12] == END) begin
+        nlast_ptr_used = 16'h0000;
+    end else begin
+        nlast_ptr_used = last_ptr_used;
+    end
 
     for (i=0; i<NCORES; i=i+1) begin
         nvalids[i] = valids[i];
@@ -160,6 +175,9 @@ always @(*) begin
                         nvalids[i] = 1'b0;
                         nlockeds[i] = 1'b0;
                         nretrs[i] = 1'b0;
+                        if (ins[15:0] == END) begin
+                            nlast_ptr_used = 16'h0000;
+                        end
                     end else begin
                         nlast_ptr_used = last_ptr_used;
                     end
