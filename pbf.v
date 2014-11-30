@@ -72,7 +72,8 @@ wire [15:0] fetch_data;
 
 // Fetch <-> Select
 wire [15:0] select_ins;
-wire core_en;
+wire [NCORES-1:0] core_ens_select = core_ens;
+wire [NCORES-1:0] core_ens_fetch;
 
 // Select <-> ALU
 wire [15:0] ptr_select;
@@ -98,10 +99,11 @@ wire [15:0] print;
 // Registers
 wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
 reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
+reg  [NCORES-1:0] core_ens;
 
 // TODO: consider letting +++++ work
 
-fetch(.clk(clk), .core_en(core_en), .stall(stall), 
+fetch(.clk(clk), .core_en(core_ens_fetch[0]), .stall(stall), 
       .branch_en(branch_en), .branch_val(branch_val),
       .fetch_addr(fetch_addr), .fetch_data(fetch_data), .ins(select_ins));
 
@@ -112,7 +114,7 @@ select #(NCORES)
          .ld_data_in(ram_ld_data), .ld_addr_out(ram_ld_addr), 
          .st_en_in(1'b0), .st_en_out(st_en),
          .st_data_out(ram_st_data), .st_addr_out(ram_st_addr),
-         .core_en_in(1'b1), .core_en_out(core_en),
+         .core_en_in(core_ens_select[0]), .core_en_out(core_ens_fetch[0]),
          .rf_in(rf[0]), .rf_out(rf[1]));
 
 // rf[1] wb rf[0] -> rf[0] select rf[1] -> rf [1] wb
@@ -141,9 +143,14 @@ ram(.address(st_en ? ram_st_addr : ram_ld_addr),
 // register file -- goes through wb, then select
 always @(posedge clk) begin
     rf_reg <= rf[1];
+    core_ens <= core_ens_fetch;
 end
 
 initial begin
+    integer i;
+    for (i=0; i<NCORES; i=i+1) begin
+        core_ens[i] = i == 0 ? 1'b1 : 1'b0;
+    end
     rf_reg <= 0;
 end
 
@@ -187,7 +194,7 @@ always @(*) begin
         7'b00100xx: debug_disp = SW[0] ? ram_ld_addr : fetch_addr;
         7'b10001xx: debug_disp = SW[0] ? alu_val     : wb_val;
         7'b10011xx: debug_disp = SW[0] ? alu_ins     : select_ins;
-        7'b11111xx: debug_disp = core_en;
+        7'b11111xx: debug_disp = core_ens_fetch;
         default:   debug_disp = 16'h0000;
 	endcase
 end

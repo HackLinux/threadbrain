@@ -109,10 +109,11 @@ wire branching = branch_en | branch_en1;
 // Keep track so that we can store it when finished.
 reg  [1+16-1:0] last_ptr_used = 0;
 reg  [1+16-1:0] nlast_ptr_used;
-wire should_st = (need_reg && 
-                  last_ptr_used[16] && 
-                  last_ptr_used[15:0] != ptr[15:0]) ||
-                  (last_ptr_used[16] && ins[15:12] == END);
+wire should_st = !branching && 
+                 ((need_reg && 
+                   last_ptr_used[16] && 
+                   last_ptr_used[15:0] != ptr[15:0]) ||
+                  (last_ptr_used[16] && ins[15:12] == END));
 
 always @(*) begin
     integer i;
@@ -127,8 +128,8 @@ always @(*) begin
     st_data_out = 16'hdead;
 
     if (need_reg) begin
-        nlast_ptr_used = {1'b1, ptr}
-    else if (ins[15:12] == END) begin
+        nlast_ptr_used = {1'b1, ptr};
+    end else if (ins[15:12] == END) begin
         nlast_ptr_used = 16'h0000;
     end else begin
         nlast_ptr_used = last_ptr_used;

@@ -20,7 +20,7 @@ reg core_en2 = 1'b0;
 
 // Handle last-fetched instruction.
 always @(*) begin
-    if (core_en2 && core_en) begin
+    if (core_en2) begin
         ins = fetch_data;
     end else begin
         ins = 16'h0000;
