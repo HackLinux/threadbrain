@@ -72,8 +72,6 @@ wire [15:0] fetch_data;
 
 // Fetch <-> Select
 wire [15:0] select_ins;
-wire [NCORES-1:0] core_ens_select = core_ens;
-wire [NCORES-1:0] core_ens_fetch;
 
 // Select <-> ALU
 wire [15:0] ptr_select;
@@ -93,6 +91,17 @@ wire [15:0] wb_val;
 wire wb_en;
 wire [15:0] ptr_wb;
 
+// Forking context
+// valid, ptr, startaddr
+wire [NCORES*(1+16+16)-1:0] fork_cxt [NCORES+1];
+assign fork_cxt[0] = fork_cxt_reg;
+wire [NCORES*(1+16+16)-1:0] fork_cxt_cores = fork_cxt[1]; // read by cores
+wire [15:0] ptr_fork = ptr_wb;
+wire [15:0] fork_ins = alu_ins;
+wire [NCORES-1:0] core_ens_fork = core_ens;// TODO connect forks to each other
+wire [NCORES-1:0] core_ens_select;
+wire [NCORES-1:0] core_ens_fetch;
+
 // Printing
 wire [15:0] print;
 
@@ -100,12 +109,15 @@ wire [15:0] print;
 wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
 reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 reg  [NCORES-1:0] core_ens;
+reg  [NCORES*(1+16+16)-1:0] fork_cxt_reg;
+
 
 // TODO: consider letting +++++ work
 
 fetch(.clk(clk), .core_en(core_ens_fetch[0]), .stall(stall), 
       .branch_en(branch_en), .branch_val(branch_val),
-      .fetch_addr(fetch_addr), .fetch_data(fetch_data), .ins(select_ins));
+      .fetch_addr(fetch_addr), .fetch_data(fetch_data), .ins(select_ins),
+      .fork_cxt(fork_cxt_cores));
 
 select #(NCORES) 
         (.ins(select_ins), .ptr(ptr_select), .clk(clk), .stall(stall),
@@ -121,7 +133,13 @@ select #(NCORES)
 
 alu(.clk(clk), .ins_in(alu_ins), .val_in(alu_val), .val_out(wb_val),
     .wb_en(wb_en), .ptr_select(ptr_select), .ptr_wb(ptr_wb),
-    .branch_val(branch_val), .branch_en(branch_en), .print(print));
+    .branch_val(branch_val), .branch_en(branch_en), .print(print),
+    .fork_cxt(fork_cxt_cores));
+
+fork_em #(NCORES)
+        (.clk(clk), .ins_in(fork_ins), .ptr(fork_ptr),
+         .core_ens_in(core_ens_fork[0]), .core_ens_out(core_ens_select[0]),
+         .fork_cxt_in(fork_cxt[0]), .fork_cxt_out(fork_cxt[1]));
 
 wb #(NCORES)
     (.clk(clk), .rf_in(rf_reg), .rf_out(rf[0]), 
@@ -143,6 +161,7 @@ ram(.address(st_en ? ram_st_addr : ram_ld_addr),
 // register file -- goes through wb, then select
 always @(posedge clk) begin
     rf_reg <= rf[1];
+    fork_cxt_reg <= fork_cxt[0];
     core_ens <= core_ens_fetch;
 end
 

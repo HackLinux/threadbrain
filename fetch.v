@@ -1,13 +1,15 @@
 module fetch(clk, 
              core_en,
              branch_en, branch_val, stall,
-             fetch_addr, fetch_data, ins); 
+             fetch_addr, fetch_data, ins,
+             fork_cxt); 
 input  clk;
 input  core_en;
 input  branch_en;
 input  stall;
 input  [15:0] branch_val;
 input  [15:0] fetch_data;
+input  [(1+16+16)-1:0] fork_cxt;
 
 output [15:0] fetch_addr = next_pc;
 output reg [15:0] ins;
@@ -33,6 +35,8 @@ always @(*) begin
         next_pc = pc;
     end else if (branch_en) begin
         next_pc = branch_val; 
+    end else if (fork_cxt[(1+16+16)-1]) begin
+        next_pc = fork_cxt[0 +: 16];
     end else begin
         next_pc = pc + 16'h0001;
     end

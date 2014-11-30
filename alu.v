@@ -2,6 +2,7 @@ module alu(clk, ins_in,
            val_in, val_out, wb_en,
            ptr_select, ptr_wb,
            branch_val, branch_en,
+           fork_cxt,
            print);
 
 parameter PLUS  = 4'h1;
@@ -16,6 +17,7 @@ parameter PRINT = 4'h9;
 input  clk;
 input  [15:0] ins_in;
 input  [15:0] val_in;
+input  [(1+16+16)-1:0] fork_cxt;
 
 output reg [15:0] val_out;
 output reg wb_en;
@@ -67,6 +69,11 @@ always @(*) begin
             print = val;
         end
     endcase
+
+    // Runs only if the current core is being started.
+    if (fork_cxt[(1+16+16)-1]) begin
+        nptr = fork_cxt[16 +: 16];
+    end
 end
 
 always @(posedge clk) begin
