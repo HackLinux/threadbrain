@@ -79,9 +79,12 @@ wire [15:0] alu_ins;
 wire [15:0] alu_val;
 
 // Select <-> RAM
-wire ram_en;
+wire ld_en;
 wire [15:0] ram_ld_data;
 wire [15:0] ram_ld_addr;
+wire st_en;
+wire [15:0] ram_st_data;
+wire [15:0] ram_st_addr;
 
 // ALU <-> WB
 wire [15:0] wb_val;
@@ -95,17 +98,20 @@ wire [15:0] print;
 wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
 reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 
-// TODO: write back register to memory when done
-// consider letting +++++ work
+// TODO: consider letting +++++ work
 
-fetch(.clk(clk), .core_en(1'b1), .stall(stall), .branch_en(branch_en), .branch_val(branch_val),
+fetch(.clk(clk), .core_en(1'b1), .stall(stall), 
+      .branch_en(branch_en), .branch_val(branch_val),
       .fetch_addr(fetch_addr), .fetch_data(fetch_data), .ins(select_ins));
 
 select #(NCORES) 
         (.ins(select_ins), .ptr(ptr_select), .clk(clk), .stall(stall),
          .out_ins(alu_ins), .branch_en(branch_en), .val(alu_val),
-         .mem_en_in(1'b0), .mem_en_out(ram_en), .mem_data_in(ram_ld_data),
-         .mem_addr_out(ram_ld_addr), .rf_in(rf[0]), .rf_out(rf[1]));
+         .ld_en_in(1'b0), .ld_en_out(ld_en), 
+         .ld_data_in(ram_ld_data), .ld_addr_out(ram_ld_addr), 
+         .st_en_in(1'b0), .st_en_out(st_en),
+         .st_data_out(ram_st_data), .st_addr_out(ram_st_addr),
+         .rf_in(rf[0]), .rf_out(rf[1]));
 
 // rf[1] wb rf[0] -> rf[0] select rf[1] -> rf [1] wb
 
@@ -126,9 +132,9 @@ rom(.address(fetch_addr),
 
 ram(.address(ram_ld_addr),
     .clock(clk),
-	 .data(16'h0000),
-	 .wren(1'b0),
-	 .q(ram_ld_data));
+	.data(ram_st_data),
+	.wren(st_en),
+	.q(ram_ld_data));
 
 // register file -- goes through wb, then select
 always @(posedge clk) begin

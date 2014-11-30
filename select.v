@@ -1,8 +1,10 @@
 module select(ins, ptr, clk, stall, out_ins,
               branch_en,
               val, 
-              mem_en_in, mem_en_out,
-              mem_data_in, mem_addr_out, // different for every select
+              ld_en_in, ld_en_out,
+              ld_data_in, ld_addr_out, // different for every select
+              st_en_in, st_en_out,
+              st_data_out, st_addr_out,
               rf_in, rf_out);
 
 parameter NCORES;
@@ -19,13 +21,17 @@ input  [15:0] ins;
 input  [15:0] ptr;
 input  clk;
 input  [NCORES*(1+1+1+16+16)-1:0] rf_in; 
-input  mem_en_in;
-input  [15:0] mem_data_in;
+input  ld_en_in;
+input  [15:0] ld_data_in;
+input  st_en_in;
 input  branch_en;
 
 output [15:0] out_ins = stall || branching ? 16'h0000 : ins;
-output [15:0] mem_addr_out = ptr;
-output reg mem_en_out;
+output [15:0] ld_addr_out = ptr;
+output reg ld_en_out;
+output reg st_en_out;
+output [15:0] st_addr_out = last_ptr_used[15:0];
+output reg [15:0] st_data_out;
 output reg stall;
 output reg [15:0] val;
 output reg [NCORES*(1+1+1+16+16)-1:0] rf_out; 
@@ -85,14 +91,19 @@ wire lock_reg = ins[15:12] == PLUS || ins[15:12] == MINUS;
 
 reg found_reg;
 reg branch_en1 = 1'b0;
-reg mem_en;
-reg mem_en1 = 1'b0;
-reg mem_en2 = 1'b0;
-reg [$clog2(NCORES)-1:0] mem_dest;
-reg [$clog2(NCORES)-1:0] mem_dest1;
-reg [$clog2(NCORES)-1:0] mem_dest2;
+reg ld_en;
+reg ld_en1 = 1'b0;
+reg ld_en2 = 1'b0;
+reg [$clog2(NCORES)-1:0] ld_dest;
+reg [$clog2(NCORES)-1:0] ld_dest1;
+reg [$clog2(NCORES)-1:0] ld_dest2;
 
 wire branching = branch_en | branch_en1;
+
+// Keep track so that we can store it when finished.
+reg  [1+16-1:0] last_ptr_used = 0;
+reg  [1+16-1:0] nlast_ptr_used;
+wire should_st = need_reg && last_ptr_used[16] && last_ptr_used[15:0] != ptr[15:0];
 
 always @(*) begin
     integer i;
@@ -100,10 +111,14 @@ always @(*) begin
     found_reg = 1'b0;
     stall = 1'b0;
     val = 16'hdead;
-    mem_en_out = mem_en_in;
-    mem_en = 1'b0;
-    mem_dest = free_reg;
-    
+    ld_en_out = ld_en_in;
+    ld_en = 1'b0;
+    ld_dest = free_reg;
+    st_en_out = st_en_in;
+    st_data_out = 16'hdead;
+
+    nlast_ptr_used = need_reg ? {1'b1, ptr} : last_ptr_used;
+
     for (i=0; i<NCORES; i=i+1) begin
         nvalids[i] = valids[i];
         nretrs[i] = retrs[i];
@@ -111,7 +126,8 @@ always @(*) begin
         ntags[i] = tags[i];
         nvals[i] = vals[i];
             
-        if (!branching) begin
+        // Determine if we have the register or should stall/load it.
+        if (!should_st && !branching) begin
             // The register is available -- maybe lock it.
             if (need_reg && 
                 valids[i] && 
@@ -130,25 +146,47 @@ always @(*) begin
                 found_reg = 1'b1;
             end
         end 
+
+
+        // Determine if we should store the old register we were using.
+        if (should_st) begin
+            stall = 1'b1;
+            if (valids[i] && tags[i] == last_ptr_used[15:0]) begin
+                if (!lockeds[i]) begin
+                    // Store back when we can.
+                    if (!st_en_in) begin
+                        st_en_out = 1'b1;
+                        st_data_out = vals[i];
+                        nvalids[i] = 1'b0;
+                        nlockeds[i] = 1'b0;
+                        nretrs[i] = 1'b0;
+                    end else begin
+                        nlast_ptr_used = last_ptr_used;
+                    end
+                end
+                // If locked, another core is using it, and will store.
+            end
+        end
     end
 
-    // Jut retrieved the register from memory.
-    if (mem_en2) begin
-        val = mem_data_in;
+    // Just retrieved the register from memory.
+    if (ld_en2) begin
+        val = ld_data_in;
         found_reg = 1'b1;
-        nvalids[mem_dest2] = 1'b1;
-        nretrs[mem_dest2] = 1'b0;
-        nlockeds[mem_dest2] = lock_reg;
-        nvals[mem_dest2] = mem_data_in;  
+        nvalids[ld_dest2] = 1'b1;
+        nretrs[ld_dest2] = 1'b0;
+        nlockeds[ld_dest2] = lock_reg;
+        nvals[ld_dest2] = ld_data_in;  
         stall = 1'b0;
     end
 
-    if (!branching && !found_reg && need_reg) begin
+    // If we need to load a register from memory.
+    if (!branching && !found_reg && need_reg && !stall && !should_st) begin
             stall = 1'b1;
-            if (!mem_en_in) begin
-                mem_en_out = 1'b1;
-                mem_en = 1'b1;
-                mem_dest = free_reg;
+            if (!ld_en_in && !st_en_in) begin
+                ld_en_out = 1'b1;
+                ld_en = 1'b1;
+                ld_dest = free_reg;
                 nretrs[free_reg] = 1'b1;
                 ntags[free_reg] = ptr;
             end
@@ -156,11 +194,13 @@ always @(*) begin
 end
 
 always @(posedge clk) begin
-    mem_en1 <= mem_en;
-    mem_en2 <= mem_en1;
-    mem_dest1 <= mem_dest;
-    mem_dest2 <= mem_dest1;
+    ld_en1 <= ld_en;
+    ld_en2 <= ld_en1;
+    ld_dest1 <= ld_dest;
+    ld_dest2 <= ld_dest1;
     branch_en1 <= branch_en;
+
+    last_ptr_used <= nlast_ptr_used;
 end
 
 endmodule
