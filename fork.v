@@ -26,11 +26,11 @@ always @(*) begin
             if (ins[15:12] == FORK &&
                 !forked_core && !core_ens_in[i]) begin
                core_ens_out[i] = 1'b1;
-               fork_cxt_out[i] = {1'b1,ptr,{4'b0000,ins[11:0]}};
+               fork_cxt_out[i*(1+16+16) +: 1+16+16] = {1'b1,ptr,{4'b0000,ins[11:0]}};
                forked_core = 1'b1; 
             end else begin
                core_ens_out[i] = core_ens_in[i];
-               fork_cxt_out[i] = fork_cxt_in[i];
+               fork_cxt_out[i*(1+16+16) +: 1+16+16] = fork_cxt_in[i*(1+16+16) +: 1+16+16];
             end
     end
 end

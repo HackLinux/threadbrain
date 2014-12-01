@@ -79,12 +79,12 @@ wire [15:0] alu_ins [NCORES];
 wire [15:0] alu_val [NCORES];
 
 // Select <-> RAM
-wire ld_en [NCORES];
-wire [15:0] ram_ld_data [NCORES];
-wire [15:0] ram_ld_addr [NCORES];
-wire st_en [NCORES];
-wire [15:0] ram_st_data [NCORES];
-wire [15:0] ram_st_addr [NCORES];
+wire ld_en;
+wire [15:0] ram_ld_data;
+wire [15:0] ram_ld_addr;
+wire st_en;
+wire [15:0] ram_st_data;
+wire [15:0] ram_st_addr;
 
 // ALU <-> WB
 wire [15:0] wb_val [NCORES];
@@ -96,8 +96,6 @@ wire [15:0] ptr_wb [NCORES];
 wire [NCORES*(1+16+16)-1:0] fork_cxt [NCORES+1];
 assign fork_cxt[0] = fork_cxt_reg;
 wire [NCORES*(1+16+16)-1:0] fork_cxt_cores = fork_cxt[1]; // read by cores
-wire [15:0] ptr_fork = ptr_wb;
-wire [15:0] fork_ins [NCORES] = alu_ins [NCORES];
 wire [NCORES-1:0] core_ens_fork = core_ens;// TODO connect forks to each other
 wire [NCORES-1:0] core_ens_select;
 wire [NCORES-1:0] core_ens_fetch;
@@ -116,8 +114,8 @@ reg  [NCORES*(1+16+16)-1:0] fork_cxt_reg;
 
 genvar i;
 generate
-    for (i=0; i<NCORES; i=i+1) begin : MAKE_MODS
-        fetch(.clk(clk), .core_en(TODO!! core_ens_fetch[i]), .stall(stall[i]), 
+    for (i=0; i<1; i=i+1) begin : MAKE_MODS
+        fetch(.clk(clk), .core_en(core_ens_fetch[0]), .stall(stall[i]), 
               .branch_en(branch_en[i]), .branch_val(branch_val[i]),
               .fetch_addr(fetch_addr[i]), .fetch_data(fetch_data[i]), 
               .ins(select_ins[i]),
@@ -144,7 +142,7 @@ generate
             .fork_cxt(fork_cxt_cores[i]));
 
         fork_em #(NCORES)
-                (.clk(clk), .ins_in(fork_ins[i]), .ptr(ptr_fork[i]),
+                (.clk(clk), .ins_in(alu_ins[i]), .ptr(ptr_wb[i]),
                  .core_ens_in(core_ens_fork[0]), 
                  .core_ens_out(core_ens_select[0]),
                  .fork_cxt_in(fork_cxt[0]), .fork_cxt_out(fork_cxt[1]));
@@ -218,19 +216,22 @@ always @(*) begin
                                  rf[0][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
                                  3'b000,
                                  rf[0][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b10000xx: debug_disp = {4'b0000,4'b0000,3'b000,stall,3'b000,branch_en};
-        7'b11000xx: debug_disp = SW[0]? ptr_select : ptr_wb; // ptr, else nptr
-        7'b01110xx: debug_disp = print;
-        7'b00010xx: debug_disp = SW[0] ? ram_ld_data : fetch_data;
-        7'b00100xx: debug_disp = SW[0] ? ram_ld_addr : fetch_addr;
-        7'b10001xx: debug_disp = SW[0] ? alu_val     : wb_val;
-        7'b10011xx: debug_disp = SW[0] ? alu_ins     : select_ins;
+        7'b10000xx: debug_disp = {4'b0000,
+                                  4'b0000,
+                                  3'b000,stall[SW[1:0],
+                                  3'b000,branch_en[SW[1:0]]};
+        7'b11000xx: debug_disp = SW[0]? ptr_select[SW[1:0]] : ptr_wb[SW[1:0]];
+        7'b01110xx: debug_disp = print[SW[1:0];
+        7'b00010xx: debug_disp = SW[0] ? ram_ld_data : fetch_data[SW[1:0]];
+        7'b00100xx: debug_disp = SW[0] ? ram_ld_addr : fetch_addr[SW[1:0]];
+        7'b10001xx: debug_disp = SW[0] ? alu_val[SW[1:0] : wb_val[SW[1:0];
+        7'b10011xx: debug_disp = SW[0] ? alu_ins[SW[1:0] : select_ins[SW[1:0];
         7'b11111xx: debug_disp = core_ens_fetch;
         default:   debug_disp = 16'h0000;
 	endcase
 end
 
 seg16({1'b1, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
-assign LEDR[9:0] = fetch_data[15:6];
+assign LEDR[9:0] = fetch_data[SW[1:0]][15:6]
 
 endmodule
