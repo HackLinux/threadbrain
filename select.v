@@ -2,9 +2,11 @@ module select(ins, ptr, clk, stall, out_ins,
               branch_en,
               val, 
               ld_en_in, ld_en_out,
-              ld_data_in, ld_addr_out, // different for every select
+              ld_data_in, 
+              ld_addr_in, ld_addr_out,
               st_en_in, st_en_out,
-              st_data_out, st_addr_out,
+              st_data_in, st_data_out, 
+              st_addr_in, st_addr_out,
               core_en_in, core_en_out,
               rf_in, rf_out);
 
@@ -27,15 +29,18 @@ input  clk;
 input  [NCORES*(1+1+1+16+16)-1:0] rf_in; 
 input  ld_en_in;
 input  [15:0] ld_data_in;
+input  [15:0] ld_addr_in;
+input  [15:0] st_data_in;
+input  [15:0] st_addr_in;
 input  st_en_in;
 input  branch_en;
 input  core_en_in;
 
 output [15:0] out_ins = stall || branching ? 16'h0000 : ins;
-output [15:0] ld_addr_out = ptr;
+output reg [15:0] ld_addr_out;
 output reg ld_en_out;
 output reg st_en_out;
-output [15:0] st_addr_out = last_ptr_used[15:0];
+output reg [15:0] st_addr_out;
 output reg [15:0] st_data_out;
 output reg stall;
 output reg [15:0] val;
@@ -122,10 +127,12 @@ always @(*) begin
     stall = 1'b0;
     val = 16'hdead;
     ld_en_out = ld_en_in;
+    ld_addr_out = ld_addr_in;
     ld_en = 1'b0;
     ld_dest = free_reg;
     st_en_out = st_en_in;
-    st_data_out = 16'hdead;
+    st_data_out = st_data_in;
+    st_addr_out = st_addr_in;
 
     if (need_reg) begin
         nlast_ptr_used = {1'b1, ptr};
@@ -173,6 +180,7 @@ always @(*) begin
                     if (!st_en_in) begin
                         st_en_out = 1'b1;
                         st_data_out = vals[i];
+                        st_addr_out = last_ptr_used[15:0];
                         nvalids[i] = 1'b0;
                         nlockeds[i] = 1'b0;
                         nretrs[i] = 1'b0;
@@ -204,6 +212,7 @@ always @(*) begin
             stall = 1'b1;
             if (!ld_en_in && !st_en_in) begin
                 ld_en_out = 1'b1;
+                ld_addr_out = ptr;
                 ld_en = 1'b1;
                 ld_dest = free_reg;
                 nretrs[free_reg] = 1'b1;
