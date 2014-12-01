@@ -82,16 +82,16 @@ wire [15:0] alu_val [NCORES];
 wire ld_ens [NCORES+1]; // NOTE: we never use the final value.
 assign ld_ens[0] = 1'b0;
 wire [15:0] ram_ld_data;
-wire [15:0] ram_ld_addr = ld_addrs[1];// TODO, switch to NCORES
+wire [15:0] ram_ld_addr = ld_addrs[NCORES];
 wire [15:0] ld_addrs [NCORES+1];
 assign ld_addrs[0] = 16'hdead;
-wire st_en = st_ens[1]; // TODO, switch to NCORES
+wire st_en = st_ens[NCORES];
 wire st_ens [NCORES+1];
 assign st_ens[0] = 1'b0;
-wire [15:0] ram_st_data = st_datas[1]; // TODO, switch to NCORES
+wire [15:0] ram_st_data = st_datas[NCORES];
 wire [15:0] st_datas [NCORES+1];
 assign st_datas[0] = 16'hdead;
-wire [15:0] ram_st_addr = st_addrs[1]; // TODO, switch to NCORES
+wire [15:0] ram_st_addr = st_addrs[NCORES];
 wire [15:0] st_addrs [NCORES+1];
 assign st_addrs[0] = 16'h0000;
 
@@ -103,11 +103,11 @@ wire [15:0] ptr_wb [NCORES];
 // Forking context
 // valid, ptr, startaddr
 wire [NCORES*(1+16+16)-1:0] fork_cxt [NCORES+1];
-assign fork_cxt[0] = fork_cxt_reg;
-wire [NCORES*(1+16+16)-1:0] fork_cxt_cores = fork_cxt[1]; // read by cores, TODO switch to N
+assign fork_cxt[0] = 0;
+wire [NCORES*(1+16+16)-1:0] fork_cxt_cores = fork_cxt[NCORES]; // read by cores
 wire [NCORES-1:0] core_ens_fork [NCORES+1];
-assign core_ens_fork[0] = core_ens;// TODO connect forks to each other
-wire [NCORES-1:0] core_ens_select = core_ens_fork[1]; // TODO, switch to N
+assign core_ens_fork[0] = core_ens;
+wire [NCORES-1:0] core_ens_select = core_ens_fork[NCORES];
 wire [NCORES-1:0] core_ens_fetch;
 
 // Printing
@@ -118,14 +118,13 @@ wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES+1];
 assign rf[0] = rf_reg;
 reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 reg  [NCORES-1:0] core_ens;
-reg  [NCORES*(1+16+16)-1:0] fork_cxt_reg;
 
 
 // TODO: consider letting +++++ work
 
 genvar i;
 generate
-    for (i=0; i<1; i=i+1) begin : MAKE_CORES
+    for (i=0; i<NCORES; i=i+1) begin : MAKE_CORES
         fetch(.clk(clk), .core_en(core_ens_fetch[i]), .stall(stall[i]), 
               .branch_en(branch_en[i]), .branch_val(branch_val[i]),
               .fetch_addr(fetch_addr[i]), .fetch_data(fetch_data[i]), 
@@ -145,8 +144,8 @@ generate
                  .st_addr_in(st_addrs[i]), .st_addr_out(st_addrs[i+1]),
                  .core_en_in(core_ens_select[i]), 
                  .core_en_out(core_ens_fetch[i]),
-                 .rf_in(rf[i+1]/*TODO i+NCORES*/), 
-                 .rf_out(rf[i+2]/*TODO i+NCORES+1*/));
+                 .rf_in(rf[i+NCORES]), 
+                 .rf_out(rf[i+NCORES+1]));
 
         alu(.clk(clk), .ins_in(alu_ins[i]), 
             .val_in(alu_val[i]), .val_out(wb_val[i]),
@@ -184,8 +183,7 @@ ram(.address(st_en ? ram_st_addr : ram_ld_addr),
 
 // register file -- goes through wb, then select
 always @(posedge clk) begin
-    rf_reg <= rf[2]; // TODO: switch to N
-    fork_cxt_reg <= fork_cxt[1]; // TODO: switch to N
+    rf_reg <= rf[2*NCORES];
     core_ens <= core_ens_fetch;
 end
 
@@ -194,7 +192,7 @@ initial begin
     for (i=0; i<NCORES; i=i+1) begin
         core_ens[i] = i == 0 ? 1'b1 : 1'b0;
     end
-    rf_reg <= 0;
+    rf_reg = 0;
 end
 
 /////// DEBUGGING ////////

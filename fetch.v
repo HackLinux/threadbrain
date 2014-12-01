@@ -37,6 +37,8 @@ always @(*) begin
         next_pc = branch_val; 
     end else if (fork_cxt[(1+16+16)-1]) begin
         next_pc = fork_cxt[0 +: 16];
+    end else if (!core_en) begin
+        next_pc = pc + 16'h0000;
     end else begin
         next_pc = pc + 16'h0001;
     end
