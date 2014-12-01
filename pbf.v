@@ -60,36 +60,36 @@ wire clk = ~KEY[0];
 parameter NCORES = 2;
 
 // Shared wires
-wire stall;
+wire stall [NCORES];
 
 // Fetch <-> ALU
-wire branch_en;
-wire [15:0] branch_val;
+wire branch_en [NCORES];
+wire [15:0] branch_val [NCORES];
 
 // Fetch <-> ROM
-wire [15:0] fetch_addr;
-wire [15:0] fetch_data;
+wire [15:0] fetch_addr [NCORES];
+wire [15:0] fetch_data [NCORES];
 
 // Fetch <-> Select
-wire [15:0] select_ins;
+wire [15:0] select_ins [NCORES];
 
 // Select <-> ALU
-wire [15:0] ptr_select;
-wire [15:0] alu_ins;
-wire [15:0] alu_val;
+wire [15:0] ptr_select [NCORES];
+wire [15:0] alu_ins [NCORES];
+wire [15:0] alu_val [NCORES];
 
 // Select <-> RAM
-wire ld_en;
-wire [15:0] ram_ld_data;
-wire [15:0] ram_ld_addr;
-wire st_en;
-wire [15:0] ram_st_data;
-wire [15:0] ram_st_addr;
+wire ld_en [NCORES];
+wire [15:0] ram_ld_data [NCORES];
+wire [15:0] ram_ld_addr [NCORES];
+wire st_en [NCORES];
+wire [15:0] ram_st_data [NCORES];
+wire [15:0] ram_st_addr [NCORES];
 
 // ALU <-> WB
-wire [15:0] wb_val;
-wire wb_en;
-wire [15:0] ptr_wb;
+wire [15:0] wb_val [NCORES];
+wire wb_en [NCORES];
+wire [15:0] ptr_wb [NCORES];
 
 // Forking context
 // valid, ptr, startaddr
@@ -97,13 +97,13 @@ wire [NCORES*(1+16+16)-1:0] fork_cxt [NCORES+1];
 assign fork_cxt[0] = fork_cxt_reg;
 wire [NCORES*(1+16+16)-1:0] fork_cxt_cores = fork_cxt[1]; // read by cores
 wire [15:0] ptr_fork = ptr_wb;
-wire [15:0] fork_ins = alu_ins;
+wire [15:0] fork_ins [NCORES] = alu_ins [NCORES];
 wire [NCORES-1:0] core_ens_fork = core_ens;// TODO connect forks to each other
 wire [NCORES-1:0] core_ens_select;
 wire [NCORES-1:0] core_ens_fetch;
 
 // Printing
-wire [15:0] print;
+wire [15:0] print [NCORES];
 
 // Registers
 wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
@@ -114,43 +114,55 @@ reg  [NCORES*(1+16+16)-1:0] fork_cxt_reg;
 
 // TODO: consider letting +++++ work
 
-fetch(.clk(clk), .core_en(core_ens_fetch[0]), .stall(stall), 
-      .branch_en(branch_en), .branch_val(branch_val),
-      .fetch_addr(fetch_addr), .fetch_data(fetch_data), .ins(select_ins),
-      .fork_cxt(fork_cxt_cores));
+genvar i;
+generate
+    for (i=0; i<NCORES; i=i+1) begin : MAKE_MODS
+        fetch(.clk(clk), .core_en(TODO!! core_ens_fetch[i]), .stall(stall[i]), 
+              .branch_en(branch_en[i]), .branch_val(branch_val[i]),
+              .fetch_addr(fetch_addr[i]), .fetch_data(fetch_data[i]), 
+              .ins(select_ins[i]),
+              .fork_cxt(fork_cxt_cores[i]));
 
-select #(NCORES) 
-        (.ins(select_ins), .ptr(ptr_select), .clk(clk), .stall(stall),
-         .out_ins(alu_ins), .branch_en(branch_en), .val(alu_val),
-         .ld_en_in(1'b0), .ld_en_out(ld_en), 
-         .ld_data_in(ram_ld_data), .ld_addr_out(ram_ld_addr), 
-         .st_en_in(1'b0), .st_en_out(st_en),
-         .st_data_out(ram_st_data), .st_addr_out(ram_st_addr),
-         .core_en_in(core_ens_select[0]), .core_en_out(core_ens_fetch[0]),
-         .rf_in(rf[0]), .rf_out(rf[1]));
+        select #(NCORES) 
+                (.ins(select_ins[i]), .ptr(ptr_select[i]), 
+                 .clk(clk), .stall(stall[i]),
+                 .out_ins(alu_ins[i]), .branch_en(branch_en[i]), 
+                 .val(alu_val[i]),
+                 .ld_en_in(1'b0), .ld_en_out(ld_en), 
+                 .ld_data_in(ram_ld_data), .ld_addr_out(ram_ld_addr), 
+                 .st_en_in(1'b0), .st_en_out(st_en),
+                 .st_data_out(ram_st_data), .st_addr_out(ram_st_addr),
+                 .core_en_in(core_ens_select[0]), 
+                 .core_en_out(core_ens_fetch[0]),
+                 .rf_in(rf[0]), .rf_out(rf[1]));
+
+        alu(.clk(clk), .ins_in(alu_ins[i]), 
+            .val_in(alu_val[i]), .val_out(wb_val[i]),
+            .wb_en(wb_en[i]), .ptr_select(ptr_select[i]), .ptr_wb(ptr_wb[i]),
+            .branch_val(branch_val[i]), .branch_en(branch_en[i]), 
+            .print(print[i]),
+            .fork_cxt(fork_cxt_cores[i]));
+
+        fork_em #(NCORES)
+                (.clk(clk), .ins_in(fork_ins[i]), .ptr(ptr_fork[i]),
+                 .core_ens_in(core_ens_fork[0]), 
+                 .core_ens_out(core_ens_select[0]),
+                 .fork_cxt_in(fork_cxt[0]), .fork_cxt_out(fork_cxt[1]));
+
+        wb #(NCORES)
+            (.clk(clk), .rf_in(rf_reg), .rf_out(rf[0]), 
+             .val_in(wb_val[i]), .wb_en_in(wb_en[i]), .ptr_in(ptr_wb[i]));
+
+        rom(.address(fetch_addr[i]), 
+            .inclock(clk),
+            .inclocken(1'b1), 
+            .outclock(clk),
+            .outclocken(!stall[i]),
+            .q(fetch_data[i]));
+    end
+endgenerate
 
 // rf[1] wb rf[0] -> rf[0] select rf[1] -> rf [1] wb
-
-alu(.clk(clk), .ins_in(alu_ins), .val_in(alu_val), .val_out(wb_val),
-    .wb_en(wb_en), .ptr_select(ptr_select), .ptr_wb(ptr_wb),
-    .branch_val(branch_val), .branch_en(branch_en), .print(print),
-    .fork_cxt(fork_cxt_cores));
-
-fork_em #(NCORES)
-        (.clk(clk), .ins_in(fork_ins), .ptr(fork_ptr),
-         .core_ens_in(core_ens_fork[0]), .core_ens_out(core_ens_select[0]),
-         .fork_cxt_in(fork_cxt[0]), .fork_cxt_out(fork_cxt[1]));
-
-wb #(NCORES)
-    (.clk(clk), .rf_in(rf_reg), .rf_out(rf[0]), 
-     .val_in(wb_val), .wb_en_in(wb_en), .ptr_in(ptr_wb));
-
-rom(.address(fetch_addr), 
-    .inclock(clk),
-    .inclocken(1'b1), 
-    .outclock(clk),
-    .outclocken(!stall),
-    .q(fetch_data));
 
 ram(.address(st_en ? ram_st_addr : ram_ld_addr),
     .clock(clk),

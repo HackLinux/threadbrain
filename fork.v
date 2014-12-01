@@ -15,7 +15,7 @@ input  [NCORES*(1+16+16)-1:0] fork_cxt_in;
 output reg [NCORES-1:0] core_ens_out;
 output reg [NCORES*(1+16+16)-1:0] fork_cxt_out;
 
-wire [15:0] ins;
+reg [15:0] ins;
 
 reg forked_core; // if we have yet forked to a core.
 
