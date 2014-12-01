@@ -104,7 +104,7 @@ wire [15:0] ptr_wb [NCORES];
 // valid, ptr, startaddr
 wire [NCORES*(1+16+16)-1:0] fork_cxt [NCORES+1];
 assign fork_cxt[0] = fork_cxt_reg;
-wire [NCORES*(1+16+16)-1:0] fork_cxt_cores = fork_cxt[1]; // read by cores
+wire [NCORES*(1+16+16)-1:0] fork_cxt_cores = fork_cxt[1]; // read by cores, TODO switch to N
 wire [NCORES-1:0] core_ens_fork [NCORES+1];
 assign core_ens_fork[0] = core_ens;// TODO connect forks to each other
 wire [NCORES-1:0] core_ens_select = core_ens_fork[1]; // TODO, switch to N
@@ -114,7 +114,8 @@ wire [NCORES-1:0] core_ens_fetch;
 wire [15:0] print [NCORES];
 
 // Registers
-wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES]; 
+wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES+1]; 
+assign rf[0] = rf_reg;
 reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 reg  [NCORES-1:0] core_ens;
 reg  [NCORES*(1+16+16)-1:0] fork_cxt_reg;
@@ -129,7 +130,7 @@ generate
               .branch_en(branch_en[i]), .branch_val(branch_val[i]),
               .fetch_addr(fetch_addr[i]), .fetch_data(fetch_data[i]), 
               .ins(select_ins[i]),
-              .fork_cxt(fork_cxt_cores[i]));
+              .fork_cxt(fork_cxt_cores[i*(1+16+16) +: 1+16+16]));
 
         select #(NCORES) 
                 (.ins(select_ins[i]), .ptr(ptr_select[i]), 
@@ -144,23 +145,24 @@ generate
                  .st_addr_in(st_addrs[i]), .st_addr_out(st_addrs[i+1]),
                  .core_en_in(core_ens_select[i]), 
                  .core_en_out(core_ens_fetch[i]),
-                 .rf_in(rf[0]), .rf_out(rf[1]));
+                 .rf_in(rf[i+1]/*TODO i+NCORES*/), 
+                 .rf_out(rf[i+2]/*TODO i+NCORES+1*/));
 
         alu(.clk(clk), .ins_in(alu_ins[i]), 
             .val_in(alu_val[i]), .val_out(wb_val[i]),
             .wb_en(wb_en[i]), .ptr_select(ptr_select[i]), .ptr_wb(ptr_wb[i]),
             .branch_val(branch_val[i]), .branch_en(branch_en[i]), 
             .print(print[i]),
-            .fork_cxt(fork_cxt_cores[i]));
+            .fork_cxt(fork_cxt_cores[i*(1+16+16) +: 1+16+16]));
 
         fork_em #(NCORES)
                 (.clk(clk), .ins_in(alu_ins[i]), .ptr(ptr_wb[i]),
                  .core_ens_in(core_ens_fork[i]), 
                  .core_ens_out(core_ens_fork[i+1]),
-                 .fork_cxt_in(fork_cxt[0]), .fork_cxt_out(fork_cxt[1]));
+                 .fork_cxt_in(fork_cxt[i]), .fork_cxt_out(fork_cxt[i+1]));
 
         wb #(NCORES)
-            (.clk(clk), .rf_in(rf_reg), .rf_out(rf[0]), 
+            (.clk(clk), .rf_in(rf[i]), .rf_out(rf[i+1]), 
              .val_in(wb_val[i]), .wb_en_in(wb_en[i]), .ptr_in(ptr_wb[i]));
 
         rom(.address(fetch_addr[i]), 
@@ -182,8 +184,8 @@ ram(.address(st_en ? ram_st_addr : ram_ld_addr),
 
 // register file -- goes through wb, then select
 always @(posedge clk) begin
-    rf_reg <= rf[1];
-    fork_cxt_reg <= fork_cxt[0];
+    rf_reg <= rf[2]; // TODO: switch to N
+    fork_cxt_reg <= fork_cxt[1]; // TODO: switch to N
     core_ens <= core_ens_fetch;
 end
 
