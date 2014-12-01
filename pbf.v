@@ -60,7 +60,15 @@ wire clk = ~KEY[0];
 parameter NCORES = 2;
 
 // Shared wires
-wire stall [NCORES];
+wire select_stall [NCORES];
+wire alu_stall [NCORES];
+reg [NCORES*16-1:0] all_ins;
+always @(*) begin
+    integer i;
+    for (i=0; i<NCORES; i=i+1) begin
+        all_ins[i*(16) +: 16] = alu_ins[i];
+    end
+end
 
 // Fetch <-> ALU
 wire branch_en [NCORES];
@@ -119,13 +127,11 @@ assign rf[0] = rf_reg;
 reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 reg  [NCORES-1:0] core_ens;
 
-
-// TODO: consider letting +++++ work
-
 genvar i;
 generate
     for (i=0; i<NCORES; i=i+1) begin : MAKE_CORES
-        fetch(.clk(clk), .core_en(core_ens_fetch[i]), .stall(stall[i]), 
+        fetch(.clk(clk), .core_en(core_ens_fetch[i]), 
+              .stall(alu_stall[i] || select_stall[i]), 
               .branch_en(branch_en[i]), .branch_val(branch_val[i]),
               .fetch_addr(fetch_addr[i]), .fetch_data(fetch_data[i]), 
               .ins(select_ins[i]),
@@ -133,7 +139,8 @@ generate
 
         select #(NCORES) 
                 (.ins(select_ins[i]), .ptr(ptr_select[i]), 
-                 .clk(clk), .stall(stall[i]),
+                 .clk(clk), .stall(select_stall[i]),
+                 .alu_stall(alu_stall[i]),
                  .out_ins(alu_ins[i]), .branch_en(branch_en[i]), 
                  .val(alu_val[i]),
                  .ld_en_in(ld_ens[i]), .ld_en_out(ld_ens[i+1]), 
@@ -147,12 +154,15 @@ generate
                  .rf_in(rf[i+NCORES]), 
                  .rf_out(rf[i+NCORES+1]));
 
-        alu(.clk(clk), .ins_in(alu_ins[i]), 
-            .val_in(alu_val[i]), .val_out(wb_val[i]),
-            .wb_en(wb_en[i]), .ptr_select(ptr_select[i]), .ptr_wb(ptr_wb[i]),
-            .branch_val(branch_val[i]), .branch_en(branch_en[i]), 
-            .print(print[i]),
-            .fork_cxt(fork_cxt_cores[i*(1+16+16) +: 1+16+16]));
+        alu #(NCORES)
+            (.clk(clk), .ins_in(alu_ins[i]), 
+             .val_in(alu_val[i]), .val_out(wb_val[i]),
+             .wb_en(wb_en[i]), .ptr_select(ptr_select[i]), .ptr_wb(ptr_wb[i]),
+             .branch_val(branch_val[i]), .branch_en(branch_en[i]), 
+             .print(print[i]),
+             .stall(alu_stall[i]),
+             .all_ins(all_ins),
+             .fork_cxt(fork_cxt_cores[i*(1+16+16) +: 1+16+16]));
 
         fork_em #(NCORES)
                 (.clk(clk), .ins_in(alu_ins[i]), .ptr(ptr_wb[i]),
@@ -168,7 +178,7 @@ generate
             .inclock(clk),
             .inclocken(1'b1), 
             .outclock(clk),
-            .outclocken(!stall[i]),
+            .outclocken(!select_stall[i] && !alu_stall[i]),
             .q(fetch_data[i]));
     end
 endgenerate
@@ -229,8 +239,8 @@ always @(*) begin
                                  3'b000,
                                  rf[0][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
         7'b10000xx: debug_disp = {4'b0000,
-                                  4'b0000,
-                                  3'b000,stall[SW[1:0]],
+                                  3'b000,alu_stall[SW[1:0]],
+                                  3'b000,select_stall[SW[1:0]],
                                   3'b000,branch_en[SW[1:0]]};
         7'b11000xx: debug_disp = SW[1]? ptr_select[SW[0]] : ptr_wb[SW[0]];
         7'b01110xx: debug_disp = print[SW[0]];
