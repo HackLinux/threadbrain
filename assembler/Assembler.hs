@@ -100,7 +100,7 @@ getNLowestBits n isSigned val
           errMsg = "More than " ++ (show n) ++ " bits encode: " ++ (show val)
 
 getLinePCs :: [BFCode] -> [Int]
-getLinePCs bfs = scanl (\acc x -> acc + (length. bf) x) 0 bfs
+getLinePCs bfs = scanl (\acc x -> acc + 1 + (length . bf) x) 0 bfs
 
 pushJump :: Int -> Stack -> ((),Stack)
 pushJump a xs = ((), a:xs)

@@ -45,7 +45,7 @@ output reg [15:0] st_data_out;
 output reg stall;
 output reg [15:0] val;
 output reg [NCORES*(1+1+1+16+16)-1:0] rf_out; 
-output core_en_out = !should_st && ins[15:12] == END ? 1'b0 : core_en_in;
+output core_en_out = !branching && !should_st && ins[15:12] == END ? 1'b0 : core_en_in;
 
 
 wire valids [NCORES];

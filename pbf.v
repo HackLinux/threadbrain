@@ -232,12 +232,13 @@ always @(*) begin
                                   4'b0000,
                                   3'b000,stall[SW[1:0]],
                                   3'b000,branch_en[SW[1:0]]};
-        7'b11000xx: debug_disp = SW[0]? ptr_select[SW[1:0]] : ptr_wb[SW[1:0]];
-        7'b01110xx: debug_disp = print[SW[1:0]];
-        7'b00010xx: debug_disp = SW[0] ? ram_ld_data : fetch_data[SW[1:0]];
-        7'b00100xx: debug_disp = SW[0] ? ram_ld_addr : fetch_addr[SW[1:0]];
-        7'b10001xx: debug_disp = SW[0] ? alu_val[SW[1:0]] : wb_val[SW[1:0]];
-        7'b10011xx: debug_disp = SW[0] ? alu_ins[SW[1:0]] : select_ins[SW[1:0]];
+        7'b11000xx: debug_disp = SW[1]? ptr_select[SW[0]] : ptr_wb[SW[0]];
+        7'b01110xx: debug_disp = print[SW[0]];
+        7'b00010xx: debug_disp = SW[1] ? ram_ld_data : fetch_data[SW[0]];
+        7'b00100xx: debug_disp = SW[1] ? ram_ld_addr : fetch_addr[SW[0]];
+        7'b10001xx: debug_disp = SW[1] ? alu_val[SW[0]] : wb_val[SW[0]];
+        7'b10011xx: debug_disp = SW[1] ? alu_ins[SW[0]] : select_ins[SW[0]];
+        7'b10111xx: debug_disp = branch_val[SW[0]];
         7'b11111xx: debug_disp = core_ens_fetch;
         default:   debug_disp = 16'h0000;
 	endcase
