@@ -4,6 +4,7 @@ module alu(clk, ins_in,
            branch_val, branch_en,
            fork_cxt,
            all_ins,
+           current_ins,
            stall,
            print);
 
@@ -33,6 +34,7 @@ output reg [15:0] branch_val;
 output reg branch_en;
 output reg [15:0] print;
 output reg stall;
+output [15:0] current_ins = ins;
 
 reg [15:0] val;
 reg [15:0] ins = 16'h0000;
