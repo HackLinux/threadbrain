@@ -58,6 +58,7 @@ getEnds _ _ [] = Right []
 
 assembleLine' :: [Int] -> [Int] -> ((), Stack) -> Int -> Int -> BFCode -> Either Error [MachineCode]
 assembleLine' startpcs syncNums ((), stack) pc line (BFCode (x:xs)) = case x of
+    ' ' -> (MachineCode "0000":) <$> rest
     '+' -> (MachineCode "1000":) <$> rest
     '-' -> (MachineCode "2000":) <$> rest
     '>' -> (MachineCode "3000":) <$> rest
@@ -81,7 +82,6 @@ assembleLine' startpcs syncNums ((), stack) pc line (BFCode (x:xs)) = case x of
               Right num -> (MachineCode ("8" ++ num ++ col):) <$> rest
               Left err -> Left err
             Left err -> Left err
-    ' ' -> assembleLine' startpcs syncNums ((), stack) pc line $ BFCode xs
     '.' -> (MachineCode "9000":) <$> rest
     where rest = assembleLine' startpcs syncNums ((), stack) (pc-1) line $ BFCode xs
           (endJump, nextstack) = getJump stack 
