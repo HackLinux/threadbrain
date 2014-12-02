@@ -38,7 +38,7 @@ input  branch_en;
 input  alu_stall;
 input  core_en_in;
 
-output [15:0] out_ins = stall || branching ? 16'h0000 : ins;
+output [15:0] out_ins = stall || other_stall ? 16'h0000 : ins;
 output reg [15:0] ld_addr_out;
 output reg ld_en_out;
 output reg st_en_out;
@@ -112,7 +112,6 @@ reg [$clog2(NCORES)-1:0] ld_dest1;
 reg [$clog2(NCORES)-1:0] ld_dest2;
 
 wire other_stall = alu_stall | branch_en | branch_en1;
-wire branching = branch_en | branch_en1;
 
 // Keep track so that we can store it when finished.
 reg  [1+16-1:0] last_ptr_used = 0;

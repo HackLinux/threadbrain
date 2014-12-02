@@ -106,7 +106,7 @@ end
 
 always @(posedge clk) begin
     val <= val_in;
-    ins <= ins_in;
+    ins <= stall ? ins : ins_in;
     ptr <= nptr; 
 end
 
