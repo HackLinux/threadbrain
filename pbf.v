@@ -62,7 +62,7 @@ parameter NCORES = 2;
 // Shared wires
 wire select_stall [NCORES];
 wire alu_stall [NCORES];
-wire alu_current_ins [NCORES];
+wire [15:0] alu_current_ins [NCORES];
 reg [NCORES*16-1:0] all_ins;
 always @(*) begin
     integer i;
@@ -249,7 +249,7 @@ always @(*) begin
         7'b00010xx: debug_disp = SW[1] ? ram_ld_data : fetch_data[SW[0]];
         7'b00100xx: debug_disp = SW[1] ? ram_ld_addr : fetch_addr[SW[0]];
         7'b10001xx: debug_disp = SW[1] ? alu_val[SW[0]] : wb_val[SW[0]];
-        7'b10011xx: debug_disp = SW[1] ? alu_current_ins[SW[0]] : select_ins[SW[0]];
+        7'b10011xx: debug_disp = SW[1] ? alu_ins[SW[0]] : select_ins[SW[0]];
         7'b10111xx: debug_disp = branch_val[SW[0]];
         7'b11111xx: debug_disp = core_ens_fetch;
         default:   debug_disp = 16'h0000;
