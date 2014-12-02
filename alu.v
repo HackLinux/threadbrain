@@ -7,7 +7,7 @@ module alu(clk, ins_in,
            current_ins,
            stall,
            num_syncs,
-           print);
+           print, next_print_valid, print_valid);
 
 parameter NCORES;
 
@@ -34,6 +34,8 @@ output [15:0] ptr_wb = ptr;
 output reg [15:0] branch_val;
 output reg branch_en;
 output reg [15:0] print;
+output next_print_valid = ins_in[15:12] == PRINT;
+output print_valid = ins[15:12] == PRINT;
 output reg stall;
 output [15:0] current_ins = ins;
 output reg [3:0] num_syncs;

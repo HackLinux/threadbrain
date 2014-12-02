@@ -12,6 +12,13 @@ set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
 set_global_assignment -name DEVICE_FILTER_PIN_COUNT 672
 set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 8_H6
 
+
+#============================================================
+# CLOCK
+#============================================================
+set_location_assignment PIN_R20 -to CLK
+set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to CLK
+
 #============================================================
 # LED
 #============================================================

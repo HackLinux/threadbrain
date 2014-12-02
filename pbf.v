@@ -4,6 +4,8 @@
 //=======================================================
 
 module pbf(
+    //////////// CLK //////////
+    CLK,
 
 	//////////// LED //////////
 	LEDG,
@@ -32,6 +34,9 @@ module pbf(
 //  PORT declarations
 //=======================================================
 
+//////////// CLK //////////
+input                       CLK; // 50 MHz
+
 //////////// LED //////////
 output		     [7:0]		LEDG;
 output		     [9:0]		LEDR;
@@ -55,7 +60,16 @@ output		     [6:0]		HEX3;
 //=======================================================
 //  Structural coding
 //=======================================================
-wire clk = ~KEY[0];
+wire clk = clk_next;
+reg clk_next = ~KEY[0];
+
+always @(posedge clk) begin
+    if (next_print_valids > 0) begin
+        clk_next <= ~KEY[0];
+    end else begin
+        clk_next <= CLK;
+    end
+end
 
 parameter NCORES = 2;
 
@@ -122,6 +136,17 @@ wire [NCORES-1:0] core_ens_fetch;
 
 // Printing
 wire [15:0] print [NCORES];
+wire print_valid [NCORES];
+wire next_print_valid [NCORES];
+reg  [NCORES-1:0] print_valids;
+reg  [NCORES-1:0] next_print_valids;
+always @(*) begin
+    integer i;
+    for (i=0; i<NCORES; i=i+1) begin
+        print_valids[i] = print_valid[i];
+        next_print_valids[i] = next_print_valid[i];
+    end
+end
 
 // Registers
 wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES+1]; 
@@ -162,6 +187,8 @@ generate
              .wb_en(wb_en[i]), .ptr_select(ptr_select[i]), .ptr_wb(ptr_wb[i]),
              .branch_val(branch_val[i]), .branch_en(branch_en[i]), 
              .print(print[i]),
+             .print_valid(print_valid[i]);
+             .next_print_valid(next_print_valid[i]);
              .stall(alu_stall[i]),
              .all_ins(all_ins),
              .num_syncs(num_syncs[i]),
@@ -260,5 +287,6 @@ end
 
 seg16({1'b1, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
 assign LEDR[9:0] = fetch_data[SW[1:0]][15:6];
+assign LEDG[NCORES-1:0] = print_valids;
 
 endmodule
