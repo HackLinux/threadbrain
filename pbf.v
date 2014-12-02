@@ -76,7 +76,7 @@ always @(posedge clk) begin
 end
 */
 
-parameter NCORES = 6;
+parameter NCORES = 4;
 
 // Shared wires
 wire select_stall [NCORES];
