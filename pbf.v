@@ -290,7 +290,7 @@ always @(*) begin
 	endcase
 end
 
-wire is_print = !SW[6:0] == 7'b0111000 || print_valids > 0;
+wire is_print = !(SW[6:0] == 7'b0111000) || print_valids > 0;
 
 seg16({is_print, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
 assign LEDR[9:0] = fetch_data[SW[1:0]][15:6];
