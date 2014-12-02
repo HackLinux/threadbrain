@@ -61,7 +61,11 @@ output		     [6:0]		HEX3;
 //  Structural coding
 //=======================================================
 wire clk = clk_next;
-reg clk_next = ~KEY[0];
+reg clk_next;
+
+initial begin
+    clk_next = ~KEY[0];
+end
 
 always @(posedge clk) begin
     if (next_print_valids > 0) begin
@@ -187,8 +191,8 @@ generate
              .wb_en(wb_en[i]), .ptr_select(ptr_select[i]), .ptr_wb(ptr_wb[i]),
              .branch_val(branch_val[i]), .branch_en(branch_en[i]), 
              .print(print[i]),
-             .print_valid(print_valid[i]);
-             .next_print_valid(next_print_valid[i]);
+             .print_valid(print_valid[i]),
+             .next_print_valid(next_print_valid[i]),
              .stall(alu_stall[i]),
              .all_ins(all_ins),
              .num_syncs(num_syncs[i]),
