@@ -76,7 +76,7 @@ always @(posedge clk) begin
 end
 */
 
-parameter NCORES = 4;
+parameter NCORES = 2;
 
 // Shared wires
 wire select_stall [NCORES];
@@ -290,7 +290,9 @@ always @(*) begin
 	endcase
 end
 
-seg16({1'b1, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
+wire is_print = !SW[6:0] == 7'b0111000 || print_valids > 0;
+
+seg16({is_print, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
 assign LEDR[9:0] = fetch_data[SW[1:0]][15:6];
 assign LEDG[NCORES-1:0] = print_valids;
 
