@@ -60,9 +60,9 @@ output		     [6:0]		HEX3;
 //=======================================================
 //  Structural coding
 //=======================================================
-wire clk = clk_next;
-reg clk_next;
-
+wire clk = ~KEY[0];
+//reg clk_next;
+/*
 initial begin
     clk_next = ~KEY[0];
 end
@@ -74,8 +74,9 @@ always @(posedge clk) begin
         clk_next <= CLK;
     end
 end
+*/
 
-parameter NCORES = 2;
+parameter NCORES = 6;
 
 // Shared wires
 wire select_stall [NCORES];
