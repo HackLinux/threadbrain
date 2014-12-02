@@ -6,6 +6,7 @@ module alu(clk, ins_in,
            all_ins,
            current_ins,
            stall,
+           num_syncs,
            print);
 
 parameter NCORES;
@@ -35,13 +36,12 @@ output reg branch_en;
 output reg [15:0] print;
 output reg stall;
 output [15:0] current_ins = ins;
+output reg [3:0] num_syncs;
 
 reg [15:0] val;
 reg [15:0] ins = 16'h0000;
 reg [15:0] ptr = 16'd128;
 reg [15:0] nptr;
-
-reg [3:0] num_syncs;
 
 always @(*) begin
     integer i;
