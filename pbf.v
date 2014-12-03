@@ -60,23 +60,19 @@ output		     [6:0]		HEX3;
 //=======================================================
 //  Structural coding
 //=======================================================
-wire clk = ~KEY[0];
-//reg clk_next;
-/*
-initial begin
-    clk_next = ~KEY[0];
-end
+reg clk;
 
-always @(posedge clk) begin
+// Run the clk at half speed until a print is outputted.
+always @(posedge CLK) begin
+    // There is something to print next cycle, stop the clock.
     if (next_print_valids > 0) begin
-        clk_next <= ~KEY[0];
+         clk <= KEY[0] && clk ? clk : ~clk;
     end else begin
-        clk_next <= CLK;
+         clk <= ~clk; 
     end
 end
-*/
 
-parameter NCORES = 2;
+parameter NCORES = 1;
 
 // Shared wires
 wire select_stall [NCORES];
@@ -290,7 +286,7 @@ always @(*) begin
 	endcase
 end
 
-wire is_print = !(SW[6:0] == 7'b0111000) || print_valids > 0;
+wire is_print = !(SW[6:0] == 7'b0111000) || print_valids[SW[0]];
 
 seg16({is_print, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
 assign LEDR[9:0] = fetch_data[SW[1:0]][15:6];
