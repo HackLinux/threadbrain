@@ -173,6 +173,7 @@ set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 set_global_assignment -name MIF_FILE rom.mif
 set_global_assignment -name VERILOG_FILE wb.v
 set_global_assignment -name VERILOG_FILE select.v
+set_global_assignment -name VERILOG_FILE div.v
 set_global_assignment -name VERILOG_FILE fork.v
 set_global_assignment -name VERILOG_FILE seg7.v
 set_global_assignment -name VERILOG_FILE rom.v

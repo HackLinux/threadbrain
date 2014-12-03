@@ -60,24 +60,16 @@ output		     [6:0]		HEX3;
 //=======================================================
 //  Structural coding
 //=======================================================
-reg clk;
+wire clk;
 
-// Run the clk at half speed until a print is outputted.
-always @(posedge CLK) begin
-    // There is something to print next cycle, stop the clock.
-//    if (next_print_valids > 0) begin
- //        clk <= KEY[0] && clk ? clk : ~clk;
-  //  end else begin
-         clk <= ~clk; 
-   // end
-end
+div #(12) (CLK, clk);
 
 parameter NCORES = 2;
 
 // Shared wires
 reg core_stall; // Stahp all the core.
 always @(posedge clk) begin
-    core_stall <= KEY[0] && next_print_valids>0;
+    core_stall <= KEY[0] && (next_print_valids>0 || (print_valids>0 && core_stall));
 end
 wire select_stall [NCORES];
 wire alu_stall [NCORES];
