@@ -20,6 +20,12 @@ set_location_assignment PIN_R20 -to CLK
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to CLK
 
 #============================================================
+# Uart to USB
+#============================================================
+set_location_assignment PIN_L9 -to UART_TX
+set_instance_assignment -name IO_STANDARD "2.5 V" -to UART_TX
+
+#============================================================
 # LED
 #============================================================
 set_location_assignment PIN_L7 -to LEDG[0]
@@ -171,6 +177,7 @@ set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 
 set_global_assignment -name MIF_FILE rom.mif
+set_global_assignment -name VERILOG_FILE uart.v
 set_global_assignment -name VERILOG_FILE wb.v
 set_global_assignment -name VERILOG_FILE select.v
 set_global_assignment -name VERILOG_FILE div.v

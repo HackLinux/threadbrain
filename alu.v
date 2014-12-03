@@ -55,7 +55,7 @@ always @(*) begin
     wb_en = 1'b0;
     branch_val = 16'hdead;
     branch_en = 1'b0;
-    print = 16'hdead;
+    print = 16'h0000;
     stall = 1'b0;
     num_syncs = 4'b0000;
 

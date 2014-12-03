@@ -7,6 +7,9 @@ module pbf(
     //////////// CLK //////////
     CLK,
 
+    //////////// Uart to USB //
+    UART_TX,
+
 	//////////// LED //////////
 	LEDG,
 	LEDR,
@@ -37,6 +40,9 @@ module pbf(
 //////////// CLK //////////
 input                       CLK; // 50 MHz
 
+//////////// Uart to USB //
+output                      UART_TX;
+
 //////////// LED //////////
 output		     [7:0]		LEDG;
 output		     [9:0]		LEDR;
@@ -61,10 +67,12 @@ output		     [6:0]		HEX3;
 //  Structural coding
 //=======================================================
 wire clk;
+wire clock115200hz; // For uart
 
-div #(12) (CLK, clk);
+div #(12) div4mhz(CLK, clk);
+div #(432) div115200hz(CLK, clock115200hz); 
 
-parameter NCORES = 4;
+parameter NCORES = 2;
 
 // Shared wires
 reg core_stall = 1'b0; // Stahp all the core.
@@ -162,6 +170,7 @@ wire [NCORES*(1+1+1+16+16)-1:0] rf [2*NCORES+1];
 assign rf[0] = rf_reg;
 reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 reg  [NCORES-1:0] core_ens;
+
 
 genvar i;
 generate
@@ -302,5 +311,16 @@ wire is_print = !(SW[6:0] == 7'b0111000) || print_valids[SW[1:0]];
 seg16({is_print, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
 assign LEDR[9:0] = fetch_data[SW[1:0]][15:6];
 assign LEDG[NCORES-1:0] = print_valids;
+
+// UART output
+reg [15:0] print_val;
+always @(*) begin
+    integer i;
+    print_val = 16'h0000;
+    for (i=0; i<NCORES; i=i+1) begin
+       print_val = print_val | print[i]; 
+    end
+end
+uarttx(clock115200hz, 1'b1, print_val[7:0], print_valids > 0,, UART_TX);
 
 endmodule
