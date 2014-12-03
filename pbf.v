@@ -65,16 +65,20 @@ reg clk;
 // Run the clk at half speed until a print is outputted.
 always @(posedge CLK) begin
     // There is something to print next cycle, stop the clock.
-    if (next_print_valids > 0) begin
-         clk <= KEY[0] && clk ? clk : ~clk;
-    end else begin
+//    if (next_print_valids > 0) begin
+ //        clk <= KEY[0] && clk ? clk : ~clk;
+  //  end else begin
          clk <= ~clk; 
-    end
+   // end
 end
 
-parameter NCORES = 1;
+parameter NCORES = 2;
 
 // Shared wires
+reg core_stall; // Stahp all the core.
+always @(posedge clk) begin
+    core_stall <= KEY[0] && next_print_valids>0;
+end
 wire select_stall [NCORES];
 wire alu_stall [NCORES];
 wire [15:0] alu_current_ins [NCORES];
@@ -159,7 +163,7 @@ genvar i;
 generate
     for (i=0; i<NCORES; i=i+1) begin : MAKE_CORES
         fetch(.clk(clk), .core_en(core_ens_fetch[i]), 
-              .stall(alu_stall[i] || select_stall[i]), 
+              .stall(alu_stall[i] || select_stall[i] || core_stall), 
               .branch_en(branch_en[i]), .branch_val(branch_val[i]),
               .fetch_addr(fetch_addr[i]), .fetch_data(fetch_data[i]), 
               .ins(select_ins[i]),
@@ -169,6 +173,7 @@ generate
                 (.ins(select_ins[i]), .ptr(ptr_select[i]), 
                  .clk(clk), .stall(select_stall[i]),
                  .alu_stall(alu_stall[i]),
+                 .core_stall(core_stall),
                  .out_ins(alu_ins[i]), .branch_en(branch_en[i]), 
                  .val(alu_val[i]),
                  .ld_en_in(ld_ens[i]), .ld_en_out(ld_ens[i+1]), 
@@ -194,7 +199,8 @@ generate
              .all_ins(all_ins),
              .num_syncs(num_syncs[i]),
              .current_ins(alu_current_ins[i]),
-             .fork_cxt(fork_cxt_cores[i*(1+16+16) +: 1+16+16]));
+             .fork_cxt(fork_cxt_cores[i*(1+16+16) +: 1+16+16]),
+             .core_stall(core_stall));
 
         fork_em #(NCORES)
                 (.clk(clk), .ins_in(alu_ins[i]), .ptr(ptr_wb[i]),
@@ -204,13 +210,14 @@ generate
 
         wb #(NCORES)
             (.clk(clk), .rf_in(rf[i]), .rf_out(rf[i+1]), 
-             .val_in(wb_val[i]), .wb_en_in(wb_en[i]), .ptr_in(ptr_wb[i]));
+             .val_in(wb_val[i]), .wb_en_in(wb_en[i]), .ptr_in(ptr_wb[i]),
+             .core_stall(core_stall));
 
         rom(.address(fetch_addr[i]), 
             .inclock(clk),
             .inclocken(1'b1), 
             .outclock(clk),
-            .outclocken(!select_stall[i] && !alu_stall[i]),
+            .outclocken(!select_stall[i] && !alu_stall[i] && !core_stall),
             .q(fetch_data[i]));
     end
 endgenerate
@@ -270,7 +277,7 @@ always @(*) begin
                                  rf[0][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
                                  3'b000,
                                  rf[0][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b10000xx: debug_disp = {4'b0000,
+        7'b10000xx: debug_disp = {3'b000,core_stall,
                                   3'b000,alu_stall[SW[1:0]],
                                   3'b000,select_stall[SW[1:0]],
                                   3'b000,branch_en[SW[1:0]]};

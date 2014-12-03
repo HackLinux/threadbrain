@@ -1,5 +1,6 @@
 module wb(clk, rf_in, rf_out,
-          val_in, wb_en_in, ptr_in);
+          val_in, wb_en_in, ptr_in,
+          core_stall);
 parameter NCORES;
 
 input  clk;
@@ -7,6 +8,7 @@ input  [NCORES*(1+1+1+16+16)-1:0] rf_in;
 input  [15:0] val_in;
 input  wb_en_in;
 input  [15:0] ptr_in;
+input  core_stall;
 
 output reg [NCORES*(1+1+1+16+16)-1:0] rf_out;
 
@@ -63,7 +65,7 @@ always @(*) begin
 end
 
 always @(posedge clk) begin
-    wb_en <= wb_en_in;
+    wb_en <= core_stall ? 1'b0 : wb_en_in;
     val <= val_in;
     ptr <= ptr_in;
 end

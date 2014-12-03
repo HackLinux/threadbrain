@@ -7,7 +7,8 @@ module alu(clk, ins_in,
            current_ins,
            stall,
            num_syncs,
-           print, next_print_valid, print_valid);
+           print, print_valid, next_print_valid,
+           core_stall);
 
 parameter NCORES;
 
@@ -26,6 +27,7 @@ input  [15:0] ins_in;
 input  [15:0] val_in;
 input  [(1+16+16)-1:0] fork_cxt;
 input  [NCORES*16-1:0] all_ins;
+input  core_stall;
 
 output reg [15:0] val_out;
 output reg wb_en;
@@ -34,8 +36,8 @@ output [15:0] ptr_wb = ptr;
 output reg [15:0] branch_val;
 output reg branch_en;
 output reg [15:0] print;
-output next_print_valid = ins_in[15:12] == PRINT;
 output print_valid = ins[15:12] == PRINT;
+output next_print_valid = ins_in[15:12] == PRINT;
 output reg stall;
 output [15:0] current_ins = ins;
 output reg [3:0] num_syncs;
@@ -107,9 +109,11 @@ always @(*) begin
 end
 
 always @(posedge clk) begin
-    val <= val_in;
-    ins <= stall ? ins : ins_in;
-    ptr <= nptr; 
+    if (!stall && !core_stall) begin
+        val <= val_in;
+        ins <= stall ? ins : ins_in;
+        ptr <= nptr; 
+    end
 end
 
 endmodule

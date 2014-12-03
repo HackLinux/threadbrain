@@ -1,6 +1,7 @@
 module select(ins, ptr, clk, stall, out_ins,
               branch_en,
               alu_stall,
+              core_stall,
               val, 
               ld_en_in, ld_en_out,
               ld_data_in, 
@@ -36,9 +37,10 @@ input  [15:0] st_addr_in;
 input  st_en_in;
 input  branch_en;
 input  alu_stall;
+input  core_stall;
 input  core_en_in;
 
-output [15:0] out_ins = stall || other_stall ? 16'h0000 : ins;
+output [15:0] out_ins = stall || branching ? 16'h0000 : ins;
 output reg [15:0] ld_addr_out;
 output reg ld_en_out;
 output reg st_en_out;
@@ -111,7 +113,8 @@ reg [$clog2(NCORES)-1:0] ld_dest;
 reg [$clog2(NCORES)-1:0] ld_dest1;
 reg [$clog2(NCORES)-1:0] ld_dest2;
 
-wire other_stall = alu_stall | branch_en | branch_en1;
+wire other_stall = alu_stall | branch_en | branch_en1 | core_stall;
+wire branching = branch_en | branch_en1;
 
 // Keep track so that we can store it when finished.
 reg  [1+16-1:0] last_ptr_used = 0;
@@ -199,6 +202,7 @@ always @(*) begin
     end
 
     // Just retrieved the register from memory.
+    // Retrieve it even if stalled!
     if (ld_en2) begin
         val = ld_data_in;
         found_reg = 1'b1;
