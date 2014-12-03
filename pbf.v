@@ -64,12 +64,24 @@ wire clk;
 
 div #(12) (CLK, clk);
 
-parameter NCORES = 2;
+parameter NCORES = 4;
 
 // Shared wires
-reg core_stall; // Stahp all the core.
+reg core_stall = 1'b0; // Stahp all the core.
+reg stall_acknowledged = 1'b0;
 always @(posedge clk) begin
-    core_stall <= KEY[0] && (next_print_valids>0 || (print_valids>0 && core_stall));
+    if (stall_acknowledged) begin
+        if (KEY[1] && core_stall) begin
+            core_stall = 1'b0;
+            stall_acknowledged = 1'b0;
+        end
+    end else begin
+        if (core_stall && ~KEY[1]) begin
+            stall_acknowledged = 1'b1;
+        end else if (!core_stall) begin
+            core_stall = KEY[1] && next_print_valids>0;
+        end
+    end
 end
 wire select_stall [NCORES];
 wire alu_stall [NCORES];
@@ -274,18 +286,18 @@ always @(*) begin
                                   3'b000,select_stall[SW[1:0]],
                                   3'b000,branch_en[SW[1:0]]};
         7'b11000xx: debug_disp = SW[1]? ptr_select[SW[0]] : ptr_wb[SW[0]];
-        7'b01110xx: debug_disp = print[SW[0]];
+        7'b01110xx: debug_disp = print[SW[1:0]];
         7'b00010xx: debug_disp = SW[1] ? ram_ld_data : fetch_data[SW[0]];
         7'b00100xx: debug_disp = SW[1] ? ram_ld_addr : fetch_addr[SW[0]];
         7'b10001xx: debug_disp = SW[1] ? alu_val[SW[0]] : wb_val[SW[0]];
         7'b10011xx: debug_disp = SW[1] ? alu_current_ins[SW[0]] : select_ins[SW[0]];
-        7'b10111xx: debug_disp = num_syncs[SW[0]];
+        7'b10111xx: debug_disp = num_syncs[SW[1:0]];
         7'b11111xx: debug_disp = core_ens_fetch;
         default:   debug_disp = 16'h0000;
 	endcase
 end
 
-wire is_print = !(SW[6:0] == 7'b0111000) || print_valids[SW[0]];
+wire is_print = !(SW[6:0] == 7'b0111000) || print_valids[SW[1:0]];
 
 seg16({is_print, debug_disp}, {HEX3,HEX2,HEX1,HEX0});
 assign LEDR[9:0] = fetch_data[SW[1:0]][15:6];
