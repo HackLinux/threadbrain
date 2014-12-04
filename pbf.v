@@ -69,7 +69,7 @@ output		     [6:0]		HEX3;
 
 ///////// NUMBER OF CORES ////////////////////
 
-parameter NCORES = 4;
+parameter NCORES = 2;
 
 /////////////////////////////////////////////
 
@@ -287,7 +287,7 @@ always @(*) begin
         7'b00000xx: debug_disp = rf[1][SW[1:0]*(1+1+1+16+16)    +: 16];
         // Register tag
         7'b01000xx: debug_disp = rf[1][SW[1:0]*(1+1+1+16+16)+16 +: 16];
-        // Register flags: Valid Retrieving Locked
+        // Register flags: Valid/Retrieving/Locked
         7'b01100xx: debug_disp = {4'b0000,
                                  3'b000,
                                  rf[1][SW[1:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
@@ -295,13 +295,14 @@ always @(*) begin
                                  rf[1][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
                                  3'b000,
                                  rf[1][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b1100xxx: debug_disp = SW[2]? ptr_select[SW[1:0]] : ptr_wb[SW[1:0]];
+        7'b11000xx: debug_disp = SW[2]? ptr_select[SW[1:0]] : ptr_wb[SW[1:0]];
         7'b01110xx: debug_disp = print[SW[1:0]];
-        7'b0001xxx: debug_disp = SW[2] ? ram_ld_data : fetch_data[SW[1:0]];
-        7'b0010xxx: debug_disp = SW[2] ? ram_ld_addr : fetch_addr[SW[1:0]];
-        7'b1001xxx: debug_disp = SW[2] ? alu_val[SW[1:0]] : wb_val[SW[1:0]];
-        7'b1110xxx: debug_disp = SW[2] ? alu_current_ins[SW[1:0]] : select_ins[SW[1:0]];
+        7'b00010xx: debug_disp = SW[2] ? ram_ld_data : fetch_data[SW[1:0]];
+        7'b00100xx: debug_disp = SW[2] ? ram_ld_addr : fetch_addr[SW[1:0]];
+        7'b10010xx: debug_disp = SW[2] ? alu_val[SW[1:0]] : wb_val[SW[1:0]];
+        7'b11100xx: debug_disp = SW[2] ? alu_current_ins[SW[1:0]] : select_ins[SW[1:0]];
         7'b10111xx: debug_disp = num_syncs[SW[1:0]];
+        // Core enables
         7'b11111xx: debug_disp = core_ens_fetch;
         default:   debug_disp = 16'h0000;
 	endcase
