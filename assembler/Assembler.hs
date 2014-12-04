@@ -63,7 +63,7 @@ assembleLine' startpcs syncNums ((), stack) pc line (BFCode (x:xs)) = case x of
     '-' -> (MachineCode "2000":) <$> rest
     '>' -> (MachineCode "3000":) <$> rest
     '<' -> (MachineCode "4000":) <$> rest
-    '[' -> case hex endJump of 
+    '[' -> case hex (endJump+1) of 
             Right end -> (MachineCode ("5" ++ end):) <$> restnext
             Left err -> Left err
     ']' -> (MachineCode "6000":) <$> (assembleLine' startpcs syncNums(pushJump pc stack) (pc-1) line $ BFCode xs)
