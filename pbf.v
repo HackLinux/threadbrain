@@ -66,15 +66,32 @@ output		     [6:0]		HEX3;
 //=======================================================
 //  Structural coding
 //=======================================================
-wire clk;
-wire clock115200hz; // For uart
 
-div #(432*10) div10thofUART(CLK, clk);
-div #(432) div115200hz(CLK, clock115200hz); 
+///////// NUMBER OF CORES ////////////////////
 
 parameter NCORES = 4;
 
-// Shared wires
+/////////////////////////////////////////////
+
+
+////////// CLOCKS /////////////////////////
+
+// 10th of uart, so that uart prints correctly.
+div #(432*10) div10thOfUART(CLK, regular_clock);
+wire regular_clock;
+wire clk = SW[9] ? ~KEY[0] : regular_clock;
+
+// UART
+wire clock115200hz; // For uart
+div #(432) div115200hz(CLK, clock115200hz); 
+
+//////////////////////////////////////////
+
+
+////////// PAUSING ON PRINT STATEMENTS ////////
+// If SW[8] is on, then the cores will all stall whenever a print
+// occurs. Press KEY[1] to end the stall.
+
 reg core_stall = 1'b0; // Stahp all the core.
 reg stall_acknowledged = 1'b0;
 always @(posedge clk) begin
@@ -87,10 +104,14 @@ always @(posedge clk) begin
         if (core_stall && ~KEY[1]) begin
             stall_acknowledged = 1'b1;
         end else if (!core_stall) begin
-            core_stall = SW[9] && KEY[1] && next_print_valids>0;
+            core_stall = SW[8] && KEY[1] && next_print_valids>0;
         end
     end
 end
+
+//////////////////////////////////////////////
+
+// Shared wires
 wire select_stall [NCORES];
 wire alu_stall [NCORES];
 wire [15:0] alu_current_ins [NCORES];
@@ -172,6 +193,7 @@ reg  [NCORES*(1+1+1+16+16)-1:0] rf_reg;
 reg  [NCORES-1:0] core_ens;
 
 
+// Generate the cores
 genvar i;
 generate
     for (i=0; i<NCORES; i=i+1) begin : MAKE_CORES
@@ -235,8 +257,6 @@ generate
     end
 endgenerate
 
-// rf[1] wb rf[0] -> rf[0] select rf[1] -> rf [1] wb
-
 ram(.address(st_en ? ram_st_addr : ram_ld_addr),
     .clock(clk),
 	.data(ram_st_data),
@@ -263,8 +283,11 @@ reg [15:0] debug_disp;
 
 always @(*) begin
     casex (SW[6:0])
+        // Register val
         7'b00000xx: debug_disp = rf[1][SW[1:0]*(1+1+1+16+16)    +: 16];
+        // Register tag
         7'b01000xx: debug_disp = rf[1][SW[1:0]*(1+1+1+16+16)+16 +: 16];
+        // Register flags: Valid Retrieving Locked
         7'b01100xx: debug_disp = {4'b0000,
                                  3'b000,
                                  rf[1][SW[1:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
@@ -272,34 +295,12 @@ always @(*) begin
                                  rf[1][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
                                  3'b000,
                                  rf[1][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b00001xx: debug_disp = rf[rf_reg][SW[1:0]*(1+1+1+16+16)    +: 16];
-        7'b01001xx: debug_disp = rf[rf_reg][SW[1:0]*(1+1+1+16+16)+16 +: 16];
-        7'b01101xx: debug_disp = {4'b0000,
-                                 3'b000,
-                                 rf[rf_reg][SW[1:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
-                                 3'b000,
-                                 rf[rf_reg][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
-                                 3'b000,
-                                 rf[rf_reg][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b00011xx: debug_disp = rf[0][SW[1:0]*(1+1+1+16+16)    +: 16];
-        7'b01011xx: debug_disp = rf[0][SW[1:0]*(1+1+1+16+16)+16 +: 16];
-        7'b01111xx: debug_disp = {4'b0000,
-                                 3'b000,
-                                 rf[0][SW[1:0]*(1+1+1+16+16)+1+1+16+16 +: 1],
-                                 3'b000,
-                                 rf[0][SW[1:0]*(1+1+1+16+16)+1+16+16   +: 1],
-                                 3'b000,
-                                 rf[0][SW[1:0]*(1+1+1+16+16)+16+16     +: 1]};
-        7'b10000xx: debug_disp = {3'b000,core_stall,
-                                  3'b000,alu_stall[SW[1:0]],
-                                  3'b000,select_stall[SW[1:0]],
-                                  3'b000,branch_en[SW[1:0]]};
-        7'b11000xx: debug_disp = SW[1]? ptr_select[SW[0]] : ptr_wb[SW[0]];
+        7'b1100xxx: debug_disp = SW[2]? ptr_select[SW[1:0]] : ptr_wb[SW[1:0]];
         7'b01110xx: debug_disp = print[SW[1:0]];
-        7'b00010xx: debug_disp = SW[1] ? ram_ld_data : fetch_data[SW[0]];
-        7'b00100xx: debug_disp = SW[1] ? ram_ld_addr : fetch_addr[SW[0]];
-        7'b10001xx: debug_disp = SW[1] ? alu_val[SW[0]] : wb_val[SW[0]];
-        7'b10011xx: debug_disp = SW[1] ? alu_current_ins[SW[0]] : select_ins[SW[0]];
+        7'b0001xxx: debug_disp = SW[2] ? ram_ld_data : fetch_data[SW[1:0]];
+        7'b0010xxx: debug_disp = SW[2] ? ram_ld_addr : fetch_addr[SW[1:0]];
+        7'b1001xxx: debug_disp = SW[2] ? alu_val[SW[1:0]] : wb_val[SW[1:0]];
+        7'b1110xxx: debug_disp = SW[2] ? alu_current_ins[SW[1:0]] : select_ins[SW[1:0]];
         7'b10111xx: debug_disp = num_syncs[SW[1:0]];
         7'b11111xx: debug_disp = core_ens_fetch;
         default:   debug_disp = 16'h0000;
