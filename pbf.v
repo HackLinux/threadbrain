@@ -69,10 +69,10 @@ output		     [6:0]		HEX3;
 wire clk;
 wire clock115200hz; // For uart
 
-div #(12) div4mhz(CLK, clk);
+div #(432*10) div10thofUART(CLK, clk);
 div #(432) div115200hz(CLK, clock115200hz); 
 
-parameter NCORES = 2;
+parameter NCORES = 4;
 
 // Shared wires
 reg core_stall = 1'b0; // Stahp all the core.
@@ -87,7 +87,7 @@ always @(posedge clk) begin
         if (core_stall && ~KEY[1]) begin
             stall_acknowledged = 1'b1;
         end else if (!core_stall) begin
-            core_stall = KEY[1] && next_print_valids>0;
+            core_stall = SW[9] && KEY[1] && next_print_valids>0;
         end
     end
 end
