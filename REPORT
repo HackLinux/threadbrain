@@ -1,0 +1,120 @@
+Report: Kathy Spradlin
+csid: spradlin
+
+
+************* INTRODUCTION ***************
+
+ThreadBrain is a multi-core architecture for
+https://github.com/cmdli/parallel-brainfuck, that supports all of the
+instructions except for the user input instruction. at it's best it can run 4
+threads at a time.
+
+
+************* COOL FEATURES (that I didn't mention in my demo) ***************
+
+- The number of cores is parameterized! So you just have to change the value of
+  "NCORES" to change the number of cores. (Changing it to 1 requires a bit more
+  work, however, because I rely on log(NCORES) all over the place.)
+- Each core is a pipelined processor.
+- Up to 4 cores works. I didn't show 4 cores in class, because I thought
+  something was wrong with the architecture. However, it turned out that I
+  acutally just introduced a wrong instruction in the brainfuck program for the
+  4 core helloworld.
+
+
+************* COOL FEATURES (that I mentioned in my demo) ***************
+
+- I support all of the instruction in the original language aside from the
+  input instruction ",". This includes thread synchronization and forking.
+- Each thread loads its register from memory only when it absolutely has to
+  access its value, and stores it back only when it absolutely needs a new
+  register. It also stores back the register when it terminates, so that all
+  registers are back in memory when the program is done.
+- The print instruction "prints" to two places. It conveys it's
+  ascii-interpreted value over the usb to uart channel. It also prints on the 7
+  seg of the board (given a certain switch configuration) -- see DEBUGGING and
+  HOW TO RUN.
+
+
+************* HOW TO RUN ***************
+
+Prelude: If you want to run a pre-synthesized version of 4 core helloworld,
+move presynth/pbf.sof to the top level and flash that. (Program will print
+immediately unless you change the configuration, see Step 4).
+
+Step 1: Decide the number of cores you want and change the NCORES variable in
+pbf.v accordingly (currently 2).  
+
+Step 2: Ensure that the program you want is in rom.mif. You can use the
+assembler in assembler/bin/assembler to assemble brainfuck code to MIF format.
+(i.e. ./assembler/bin/assembler example.mif -o rom.mif). Example programs in
+examples/. The current rom.mif is the 2 core hello world program.
+
+Step 3: Synthesize
+
+Step 4: Decide how you want to run:
+- SW[9] ? clk = KEY[0] : clk = hardware clock.
+- SW[8] ? stall cores whenever there is a print (see DEBUGGING for how to view
+  prints on the board).
+  **** Press SW[1] to continue to next print or end of program ****
+  **** LEDG shows which cores are printing ****
+
+To view the uart output on a mac:
+- hook the board up to your mac via USB (need a second USB cord so that you can
+  flash at the same time)
+- find the port connection using ls /dev (example: /dev/tty.usbserial-AH01ZEJQ)
+- screen /dev/tty.usbserial-AH01ZEJQ 115200
+
+
+************* DEBUGGING **************
+
+You can see the debugging section of pbf.v for all switch configurations, but
+the following are the most useful combinations of the last six switches:
+
+000 0xx : value contained in register SW[1:0].
+100 0xx : memory address of value contianed in register SW[1:0]
+110 0xx : Flags for register SW[1:0]: 
+          [4'b0] [3'valid] [3'retrieving from mem] [3'locked]
+111 0xx : The PRINT wire from core[SW[1:0]].
+***LEDG shows which cores are printing****
+
+
+************* THE INSTRUCTION SET **************
+
+Each thread has a "ptr" to an data address in memory, default 128 (because the
+size of ram is 256 words).
+>, <  : ptr++, ptr--
++, -  : (*ptr)++, (*ptr)--
+[, ]  : while (*ptr) { ... }
+.     : print
+*,v,^ : fork this line/lower line/upper line (with same ptr as parent)
+|     : waits on all threads with that share a pipe in the same column
+\n    : denotes end of thread
+
+
+************* THE ARCHITECTURE **************
+
+ThreadBrain consists of a variable number of pipelined processors. Each
+processor has access to the same set of registers, as many as there are
+processors. Each processor has 256 16 bit words of rom, which contains a whole
+copy of the program. By having their own rom, each core can fetch instructions
+every cycle. Any processor can run any thread. Processors ignore the
+instructions immediately following a branch if the branch was taken; there is
+no other branch prediction. Processors disable themselves when the see the end
+of line command. See the file for each stage of the pipeline for more comments
+on what happens.
+
+
+************* THE ASSEMBLER **************
+
+I modified our c16 assembler to assemble the brainfuck code into 16 bit
+instructions. It's very simple, and it directly encodes the pc to jump to in
+branches and forks. It also encodes two pieces of information in sync
+instructions: how many threads to wait to sync with, and what "column" those
+threads are in (so it only waits for threads to syncing in the correct column).
+
+
+************* ATTRIBUTIONS **************
+
+Many thanks to Chris Haster for his uart module and prior work on assembler,
+and to Andrew Lin for his Quartus make script.
