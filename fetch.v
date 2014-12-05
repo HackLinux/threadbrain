@@ -1,3 +1,7 @@
+// This module fetches the next instruction from memory. It can stall and
+// branch to a new instruction as well. It fetches the same instruction over
+// and over again if the core is disabled, and sends noops to the rest of the
+// pipeline.
 module fetch(clk, 
              core_en,
              branch_en, branch_val, stall,

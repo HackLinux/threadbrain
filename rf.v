@@ -1,3 +1,5 @@
+// The form of a register is:
+// [valid] [retrieving from mem] [locked] [16' memory pointer] [16' value]
 module rf_read(num, rf_in, valid, retriving, locked, tag, val);
 
 parameter NCORES;

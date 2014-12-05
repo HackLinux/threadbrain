@@ -1,3 +1,6 @@
+// If there is a fork instruction, this module finds the next available core
+// and gives it enough context to start with the parent's memory pointer and
+// the starting pc of the thread it should run.
 module fork_em(clk, ins_in, ptr,
                core_ens_in, core_ens_out,
                fork_cxt_in, fork_cxt_out);

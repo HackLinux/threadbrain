@@ -1,3 +1,5 @@
+// In charge of a bit more than a regular alu.  Adds, subtracts, branches,
+// prints, and waits for sync/barrier instructions to be fulfilled.
 module alu(clk, ins_in,
            val_in, val_out, wb_en,
            ptr_select, ptr_wb,

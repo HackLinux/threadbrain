@@ -1,3 +1,6 @@
+// In charge of decoding and locking the required register, or loading it from
+// memory. It also stores registers back to memory when fetching a new one, or
+// if the core becomes disabled.
 module select(ins, ptr, clk, stall, out_ins,
               branch_en,
               alu_stall,

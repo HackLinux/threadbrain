@@ -1,3 +1,6 @@
+// Writes back to registers. If a register's value was changed, this unlocks
+// the register for future use and writes the new value to it. Not in charge of
+// storing the register back in memory.
 module wb(clk, rf_in, rf_out,
           val_in, wb_en_in, ptr_in,
           core_stall);
